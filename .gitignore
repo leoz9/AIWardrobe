@@ -1,0 +1,23 @@
+# General
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+*.log
+
+# Python Backend
+backend/__pycache__/
+backend/venv/
+backend/.env
+backend/wardrobe.db
+backend/storage/llm_config.json
+backend/secrets.env
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Node Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local

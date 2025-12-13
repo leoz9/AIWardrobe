@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pillow
+rembg
+onnxruntime
+aiosqlite
+google-generativeai
+pydantic
+httpx
+python-dotenv
