@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   ai-wardrobe:
-    build: .
+    image: ghcr.io/leoz9/aiwardrobe:latest
+    # 如果想本地构建，注释上面的 image 行，取消下面的 build 注释
+    # build: .
     container_name: ai_wardrobe
     ports:
       - "8000:8000"

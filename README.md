@@ -173,36 +173,32 @@ start.bat
 
 ## 🐳 Docker 一键部署 (Docker Deployment)
 
-如果您不想配置本地开发环境，可以直接使用 Docker 快速启动。
+使用预构建的 Docker 镜像，无需本地编译，一分钟完成部署！
 
 ### 前置要求
 - 安装 [Docker](https://www.docker.com/) 和 Docker Compose
 
 ### 部署步骤
 
-1.  **配置环境变量**
-    
-    同本地开发一样，首先需要在 `backend` 目录下创建并配置 `.env` 文件：
+1.  **克隆项目并配置环境变量**
     ```bash
-    cd backend
-    cp .env.example .env
-    # 编辑 .env 填入 API Key
+    git clone https://github.com/leoz9/AIWardrobe.git
+    cd AIWardrobe
+    cd backend && cp .env.example .env
+    # 编辑 .env 填入您的 API Key
     ```
 
-2.  **一键启动**
-    
-    在项目根目录下运行：
+2.  **一键启动** ✨
     ```bash
-    docker-compose up -d --build
+    cd .. && docker-compose up -d
     ```
+    > 💡 现在直接从 GitHub Container Registry 拉取预构建镜像，无需本地 build！
 
 3.  **访问项目**
-    
-    启动完成后，直接访问：
     *   🏠 **Web 应用**: [http://localhost:8000](http://localhost:8000)
     *   📄 **API 文档**: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-    > ⚠️ **注意**: Docker 部署模式下，数据（数据库和上传图片）将持久化保存在 `backend/data` 和 `backend/uploads` 目录中。
+    > ⚠️ **注意**: 数据（数据库和上传图片）将持久化保存在 `backend/data` 和 `backend/uploads` 目录中。
 
 ## 📈 Star History
 
