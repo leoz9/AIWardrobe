@@ -175,10 +175,26 @@ start.bat
 
 使用预构建的 Docker 镜像，无需本地编译，一分钟完成部署！
 
-### 前置要求
+### ⚡ Quick Start
+
+```bash
+# 拉取镜像
+docker pull ghcr.io/leoz9/aiwardrobe:latest
+
+# 运行容器 (需要先配置 .env 文件)
+docker run -d -p 8000:8000 \
+  --env-file backend/.env \
+  -v $(pwd)/backend/uploads:/app/backend/uploads \
+  -v $(pwd)/backend/data:/app/backend/data \
+  ghcr.io/leoz9/aiwardrobe:latest
+```
+
+### 📦 使用 Docker Compose (推荐)
+
+#### 前置要求
 - 安装 [Docker](https://www.docker.com/) 和 Docker Compose
 
-### 部署步骤
+#### 部署步骤
 
 1.  **克隆项目并配置环境变量**
     ```bash
