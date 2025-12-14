@@ -12,6 +12,7 @@ Thumbs.db
 backend/venv/
 backend/.env
 backend/wardrobe.db
+backend/data/
 backend/storage/llm_config.json
 backend/secrets.env
 backend/uploads/*

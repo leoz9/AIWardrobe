@@ -58,9 +58,9 @@ app.include_router(weather_router, prefix="/api", tags=["天气"])
 app.include_router(recommendation_router, prefix="/api", tags=["AI推荐"])
 
 
-@app.get("/")
-async def root():
-    """API 根路径"""
+@app.get("/api")
+async def api_info():
+    """API 信息"""
     return {
         "message": "👕 AI 智能衣柜 API",
         "docs": "/docs",
@@ -97,7 +97,12 @@ if static_dir.exists():
     async def favicon():
         return FileResponse(static_dir / "favicon.ico")
 
-    # 3. SPA 路由 - 所有未匹配的路径都返回 index.html
+    # 3. 根路径返回 index.html
+    @app.get("/")
+    async def serve_root():
+        return FileResponse(static_dir / "index.html")
+
+    # 4. SPA 路由 - 所有未匹配的路径都返回 index.html
     # 注意：这必须放在所有 API 路由定义之后
     @app.get("/{full_path:path}", include_in_schema=False)
     async def serve_frontend(full_path: str):
@@ -112,4 +117,12 @@ if static_dir.exists():
             
         # 默认返回 index.html 让前端路由处理
         return FileResponse(static_dir / "index.html")
-
+else:
+    # 纯后端模式下的根路径提示
+    @app.get("/")
+    async def root():
+        return {
+            "message": "Backend is running. Frontend static files not found.",
+            "api_info": "/api",
+            "docs": "/docs"
+        }
