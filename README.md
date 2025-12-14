@@ -206,13 +206,7 @@ start.bat
 
 ## 📈 Star History
 
-<a href="https://star-history.com/#leoz9/AIWardrobe&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=leoz9/AIWardrobe&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=leoz9/AIWardrobe&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=leoz9/AIWardrobe&type=Date" />
- </picture>
-</a>
+[![Star History Chart](https://api.star-history.com/svg?repos=leoz9/AIWardrobe&type=date&legend=top-left)](https://www.star-history.com/#leoz9/AIWardrobe&type=date&legend=top-left)
 
 ## 🤝 贡献 (Contributing)
 非常欢迎您的贡献！如果您有好的建议或发现了 Bug，请随时提交 Issue 或 Pull Request。
