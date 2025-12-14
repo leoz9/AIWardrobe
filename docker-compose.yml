@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  ai-wardrobe:
+    build: .
+    container_name: ai_wardrobe
+    ports:
+      - "8000:8000"
+    environment:
+      # Tell the app to store the database in the data directory
+      - DB_FILE_PATH=/app/backend/data/wardrobe.db
+    env_file:
+      # Load environment variables from the backend/.env file
+      - backend/.env
+    volumes:
+      # Persist uploaded images
+      - ./backend/uploads:/app/backend/uploads
+      # Persist database
+      - ./backend/data:/app/backend/data
+    restart: unless-stopped

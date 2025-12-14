@@ -10,11 +10,18 @@ from domain.clothes import ClothesItem, ClothesCreate
 from storage.models import CLOTHES_TABLE_SQL, CLOTHES_INDEX_SQL
 
 # 数据库文件路径
-DB_PATH = Path(__file__).parent.parent / "wardrobe.db"
+# 优先使用环境变量，方便 Docker 挂载 volume
+import os
+_default_path = Path(__file__).parent.parent / "wardrobe.db"
+DB_PATH = Path(os.getenv("DB_FILE_PATH", _default_path))
 
 
 async def init_db():
     """初始化数据库，创建表和索引"""
+    # 确保数据库文件的父目录存在
+    if not DB_PATH.parent.exists():
+        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(CLOTHES_TABLE_SQL)
         await db.execute(CLOTHES_INDEX_SQL)
