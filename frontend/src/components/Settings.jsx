@@ -1,6 +1,17 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useTheme } from '../contexts/ThemeContext'
+import { Sun, Moon, Globe } from 'lucide-react'
+
+const LANGUAGES = [
+    { code: 'zh', label: '中文' },
+    { code: 'en', label: 'English' },
+    { code: 'ja', label: '日本語' }
+]
 
 const Settings = ({ isOpen, onClose, onSave }) => {
+    const { t, i18n } = useTranslation()
+    const { theme, toggleTheme } = useTheme()
     const [config, setConfig] = useState({
         api_base: 'https://api.openai.com/v1',
         api_key: '',
@@ -91,7 +102,7 @@ const Settings = ({ isOpen, onClose, onSave }) => {
         } catch (error) {
             setTestResult({
                 success: false,
-                message: '连接测试失败'
+                message: t('settings.testFailed')
             })
         } finally {
             setTesting(false)
@@ -136,30 +147,96 @@ const Settings = ({ isOpen, onClose, onSave }) => {
         }
     }
 
+    const changeLanguage = (lng) => {
+        i18n.changeLanguage(lng)
+    }
+
     if (!isOpen) return null
 
     return (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm transition-opacity" onClick={onClose}>
-            <div 
-                className="bg-[#FAFAFA] w-full max-w-lg rounded-t-3xl sm:rounded-2xl max-h-[90vh] sm:max-h-[85vh] flex flex-col shadow-xl animate-[slideUp_0.3s_ease-out]" 
+            <div
+                className="bg-[var(--bg-primary)] w-full max-w-lg rounded-t-3xl sm:rounded-2xl max-h-[90vh] sm:max-h-[85vh] flex flex-col shadow-xl animate-[slideUp_0.3s_ease-out]"
                 onClick={e => e.stopPropagation()}
             >
-                <div className="flex items-center justify-between p-5 border-b border-zinc-200 bg-white sm:rounded-t-2xl px-6">
-                    <h2 className="text-xl font-serif font-bold text-zinc-900 tracking-tight">API 设置</h2>
-                    <button className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-100 text-zinc-500 hover:bg-zinc-200 hover:text-zinc-800 transition-colors" onClick={onClose}>
+                <div className="flex items-center justify-between p-5 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 sm:rounded-t-2xl px-6">
+                    <h2 className="text-xl font-serif font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">{t('settings.title')}</h2>
+                    <button className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors" onClick={onClose}>
                         ✕
                     </button>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                    {/* App Settings Section */}
+                    <div className="space-y-4">
+                        <div className="text-xs font-bold tracking-widest text-zinc-400 uppercase">{t('settings.appSection')}</div>
+
+                        {/* Language Switcher */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                                <Globe size={16} className="text-accent" />
+                                {t('settings.language')}
+                            </label>
+                            <div className="flex gap-2">
+                                {LANGUAGES.map(lang => (
+                                    <button
+                                        key={lang.code}
+                                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                            i18n.language === lang.code || (i18n.language.startsWith(lang.code))
+                                                ? 'bg-accent text-white shadow-sm'
+                                                : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                                        }`}
+                                        onClick={() => changeLanguage(lang.code)}
+                                    >
+                                        {lang.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Theme Switcher */}
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                                {theme === 'dark' ? <Moon size={16} className="text-accent" /> : <Sun size={16} className="text-accent" />}
+                                {t('settings.theme')}
+                            </label>
+                            <div className="flex gap-2">
+                                <button
+                                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                                        theme === 'light'
+                                            ? 'bg-accent text-white shadow-sm'
+                                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                                    }`}
+                                    onClick={() => theme !== 'light' && toggleTheme()}
+                                >
+                                    <Sun size={14} />
+                                    {t('settings.themeLight')}
+                                </button>
+                                <button
+                                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                                        theme === 'dark'
+                                            ? 'bg-accent text-white shadow-sm'
+                                            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                                    }`}
+                                    onClick={() => theme !== 'dark' && toggleTheme()}
+                                >
+                                    <Moon size={14} />
+                                    {t('settings.themeDark')}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="h-px bg-zinc-200/60 dark:bg-zinc-700/60 w-full" />
+
                     {/* LLM Section */}
                     <div className="space-y-4">
-                        <div className="text-xs font-bold tracking-widest text-zinc-400 uppercase">LLM 模型设置</div>
-                        
+                        <div className="text-xs font-bold tracking-widest text-zinc-400 uppercase">{t('settings.llmSection')}</div>
+
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-zinc-700 flex justify-between">
-                                API Base URL
-                                <span className="text-zinc-400 font-normal">支持 OpenAI 风格</span>
+                            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex justify-between">
+                                {t('settings.apiBaseLabel')}
+                                <span className="text-zinc-400 font-normal">{t('settings.apiBaseHint')}</span>
                             </label>
                             <input
                                 type="url"
@@ -171,10 +248,10 @@ const Settings = ({ isOpen, onClose, onSave }) => {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-zinc-700 flex justify-between">
-                                API Key
+                            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex justify-between">
+                                {t('settings.apiKeyLabel')}
                                 {hasExistingKey && !config.api_key && (
-                                    <span className="text-green-500 font-normal text-xs bg-green-50 px-2 py-0.5 rounded">已配置</span>
+                                    <span className="text-green-500 font-normal text-xs bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded">{t('settings.configured')}</span>
                                 )}
                             </label>
                             <input
@@ -182,14 +259,14 @@ const Settings = ({ isOpen, onClose, onSave }) => {
                                 className="input-field font-mono"
                                 value={config.api_key}
                                 onChange={e => setConfig(prev => ({ ...prev, api_key: e.target.value }))}
-                                placeholder={hasExistingKey ? "••••••••（留空保持不变）" : "sk-..."}
+                                placeholder={hasExistingKey ? `••••••••（${t('settings.keepEmpty')}）` : "sk-..."}
                             />
                         </div>
 
                         <div className="space-y-2 relative">
-                            <label className="text-sm font-medium text-zinc-700 flex justify-between">
-                                模型
-                                {loading && <span className="text-zinc-400 font-normal animate-pulse text-xs">获取中...</span>}
+                            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex justify-between">
+                                {t('settings.model')}
+                                {loading && <span className="text-zinc-400 font-normal animate-pulse text-xs">{t('settings.fetching')}</span>}
                             </label>
                             <div className="flex gap-2 relative">
                                 {models.length > 0 && showModelSelect ? (
@@ -211,7 +288,7 @@ const Settings = ({ isOpen, onClose, onSave }) => {
                                             {models.map(m => (
                                                 <option key={m.id} value={m.id}>{m.name}</option>
                                             ))}
-                                            <option value="__custom__">⚙️ 手动输入...</option>
+                                            <option value="__custom__">⚙️ {t('settings.manualInput')}</option>
                                         </select>
                                     </div>
                                 ) : (
@@ -226,9 +303,9 @@ const Settings = ({ isOpen, onClose, onSave }) => {
                                         />
                                         {models.length > 0 && (
                                             <button
-                                                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-zinc-700 rounded-md"
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 rounded-md"
                                                 onClick={() => setShowModelSelect(true)}
-                                                title="切换到列表"
+                                                title={t('settings.switchToList')}
                                             >
                                                 📋
                                             </button>
@@ -236,7 +313,7 @@ const Settings = ({ isOpen, onClose, onSave }) => {
                                     </div>
                                 )}
                                 <button className="btn-secondary px-3 shrink-0" onClick={fetchModels} disabled={loading}>
-                                    获取
+                                    {t('settings.fetch')}
                                 </button>
                             </div>
                         </div>
@@ -244,20 +321,20 @@ const Settings = ({ isOpen, onClose, onSave }) => {
                         <div className="pt-2">
                             <button
                                 className={`w-full py-2.5 rounded-lg border flex items-center justify-center gap-2 font-medium transition-colors ${
-                                    testResult?.success ? 'border-green-200 bg-green-50 text-green-700' :
-                                    testResult?.success === false ? 'border-red-200 bg-red-50 text-red-700' :
-                                    'border-zinc-200 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 hover:border-zinc-300'
+                                    testResult?.success ? 'border-green-200 bg-green-50 dark:bg-green-900/30 dark:border-green-800 text-green-700 dark:text-green-400' :
+                                    testResult?.success === false ? 'border-red-200 bg-red-50 dark:bg-red-900/30 dark:border-red-800 text-red-700 dark:text-red-400' :
+                                    'border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:border-zinc-300'
                                 }`}
                                 onClick={handleTestConnection}
                                 disabled={testing}
                             >
                                 {testing ? <span className="w-4 h-4 border-2 border-zinc-400 border-t-zinc-600 rounded-full animate-spin"></span> : '🔗'}
-                                {testing ? '测试连接...' : testResult ? testResult.message : '测试连接'}
+                                {testing ? t('settings.testing') : testResult ? testResult.message : t('settings.testConnection')}
                             </button>
                         </div>
 
                         <div className="pt-2">
-                            <p className="text-xs text-zinc-500 mb-2 font-medium">快捷预设：</p>
+                            <p className="text-xs text-zinc-500 mb-2 font-medium">{t('settings.presets')}</p>
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
                                 {[
                                     { name: 'OpenAI', base: 'https://api.openai.com/v1', model: 'gpt-4o' },
@@ -267,7 +344,7 @@ const Settings = ({ isOpen, onClose, onSave }) => {
                                 ].map(p => (
                                     <button
                                         key={p.name}
-                                        className="py-1.5 px-2 bg-white border border-zinc-200 rounded-md text-xs font-medium text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors"
+                                        className="py-1.5 px-2 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-md text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors"
                                         onClick={() => setConfig(prev => ({ ...prev, api_base: p.base, model: p.model }))}
                                     >
                                         {p.name}
@@ -277,14 +354,14 @@ const Settings = ({ isOpen, onClose, onSave }) => {
                         </div>
                     </div>
 
-                    <div className="h-px bg-zinc-200/60 w-full" />
+                    <div className="h-px bg-zinc-200/60 dark:bg-zinc-700/60 w-full" />
 
                     {/* Image Processing Section */}
                     <div className="space-y-4">
-                        <div className="text-xs font-bold tracking-widest text-zinc-400 uppercase">图像抠图设置</div>
-                        
+                        <div className="text-xs font-bold tracking-widest text-zinc-400 uppercase">{t('settings.imageSection')}</div>
+
                         <div className="flex flex-col gap-3">
-                            <label className={`flex gap-3 p-3 rounded-xl border-2 transition-colors cursor-pointer ${config.bg_removal_method === 'local' ? 'border-accent bg-blue-50/20' : 'border-zinc-200 bg-white hover:border-zinc-300'}`}>
+                            <label className={`flex gap-3 p-3 rounded-xl border-2 transition-colors cursor-pointer ${config.bg_removal_method === 'local' ? 'border-accent bg-blue-50/20 dark:bg-blue-950/20' : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-600'}`}>
                                 <input
                                     type="radio"
                                     name="bg_removal_method"
@@ -294,12 +371,12 @@ const Settings = ({ isOpen, onClose, onSave }) => {
                                     onChange={e => setConfig(prev => ({ ...prev, bg_removal_method: e.target.value }))}
                                 />
                                 <div className="flex flex-col">
-                                    <span className="font-medium text-zinc-900 text-sm">本地离线 rembg</span>
-                                    <span className="text-xs text-zinc-500 mt-0.5">服务器端免费推理，保护隐私</span>
+                                    <span className="font-medium text-zinc-900 dark:text-zinc-100 text-sm">{t('settings.localRembg')}</span>
+                                    <span className="text-xs text-zinc-500 mt-0.5">{t('settings.localRembgDesc')}</span>
                                 </div>
                             </label>
 
-                            <label className={`flex gap-3 p-3 rounded-xl border-2 transition-colors cursor-pointer ${config.bg_removal_method === 'removebg' ? 'border-accent bg-blue-50/20' : 'border-zinc-200 bg-white hover:border-zinc-300'}`}>
+                            <label className={`flex gap-3 p-3 rounded-xl border-2 transition-colors cursor-pointer ${config.bg_removal_method === 'removebg' ? 'border-accent bg-blue-50/20 dark:bg-blue-950/20' : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-600'}`}>
                                 <input
                                     type="radio"
                                     name="bg_removal_method"
@@ -309,21 +386,21 @@ const Settings = ({ isOpen, onClose, onSave }) => {
                                     onChange={e => setConfig(prev => ({ ...prev, bg_removal_method: e.target.value }))}
                                 />
                                 <div className="flex flex-col">
-                                    <span className="font-medium text-zinc-900 text-sm flex items-center gap-2">
+                                    <span className="font-medium text-zinc-900 dark:text-zinc-100 text-sm flex items-center gap-2">
                                         remove.bg API
-                                        <span className="px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-500 text-[10px] font-bold">PRO</span>
+                                        <span className="px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-500 text-[10px] font-bold">PRO</span>
                                     </span>
-                                    <span className="text-xs text-zinc-500 mt-0.5">专业级抠图效果，需自行提供 API Key</span>
+                                    <span className="text-xs text-zinc-500 mt-0.5">{t('settings.removebgDesc')}</span>
                                 </div>
                             </label>
                         </div>
 
                         {config.bg_removal_method === 'removebg' && (
                             <div className="animate-fade-in space-y-2 mt-4">
-                                <label className="text-sm font-medium text-zinc-700 flex justify-between">
+                                <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex justify-between">
                                     remove.bg API Key
                                     {hasRemoveBgKey && !config.removebg_api_key && (
-                                        <span className="text-green-500 font-normal text-xs bg-green-50 px-2 py-0.5 rounded">已配置</span>
+                                        <span className="text-green-500 font-normal text-xs bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded">{t('settings.configured')}</span>
                                     )}
                                 </label>
                                 <input
@@ -331,28 +408,28 @@ const Settings = ({ isOpen, onClose, onSave }) => {
                                     className="input-field font-mono"
                                     value={config.removebg_api_key}
                                     onChange={e => setConfig(prev => ({ ...prev, removebg_api_key: e.target.value }))}
-                                    placeholder={hasRemoveBgKey ? "••••••••（留空保持不变）" : "请输入 API Key"}
+                                    placeholder={hasRemoveBgKey ? `••••••••（${t('settings.keepEmpty')}）` : t('settings.removebgKeyPlaceholder')}
                                 />
                                 <div className="text-xs flex justify-end">
                                     <a href="https://www.remove.bg/api" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
-                                        前往获取 →
+                                        {t('settings.getKey')}
                                     </a>
                                 </div>
                             </div>
                         )}
                     </div>
 
-                    <div className="h-px bg-zinc-200/60 w-full" />
+                    <div className="h-px bg-zinc-200/60 dark:bg-zinc-700/60 w-full" />
 
                     {/* Weather API Section */}
                     <div className="space-y-4 pb-4">
-                        <div className="text-xs font-bold tracking-widest text-zinc-400 uppercase">天气查询设置</div>
-                        
+                        <div className="text-xs font-bold tracking-widest text-zinc-400 uppercase">{t('settings.weatherSection')}</div>
+
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-zinc-700 flex justify-between">
-                                和风天气 API Key
+                            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex justify-between">
+                                {t('settings.qweatherKey')}
                                 {hasQweatherKey && !config.qweather_api_key && (
-                                    <span className="text-green-500 font-normal text-xs bg-green-50 px-2 py-0.5 rounded">已配置</span>
+                                    <span className="text-green-500 font-normal text-xs bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded">{t('settings.configured')}</span>
                                 )}
                             </label>
                             <input
@@ -360,12 +437,12 @@ const Settings = ({ isOpen, onClose, onSave }) => {
                                 className="input-field font-mono"
                                 value={config.qweather_api_key}
                                 onChange={e => setConfig(prev => ({ ...prev, qweather_api_key: e.target.value }))}
-                                placeholder={hasQweatherKey ? "••••••••（留空保持不变）" : "请输入 API Key"}
+                                placeholder={hasQweatherKey ? `••••••••（${t('settings.keepEmpty')}）` : t('settings.removebgKeyPlaceholder')}
                             />
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-zinc-700 flex justify-between">
+                            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex justify-between">
                                 API Host
                             </label>
                             <input
@@ -377,23 +454,23 @@ const Settings = ({ isOpen, onClose, onSave }) => {
                             />
                             <div className="text-xs flex justify-end mt-1">
                                 <a href="https://console.qweather.com" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
-                                    和风控制台 →
+                                    {t('settings.qweatherConsole')}
                                 </a>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="p-5 border-t border-zinc-200 bg-white sm:rounded-b-2xl flex gap-3 pb-safe bg-zinc-50/50">
-                    <button className="flex-1 py-3 rounded-xl font-medium bg-zinc-100 text-zinc-700 hover:bg-zinc-200 transition-colors" onClick={onClose}>
-                        取消
+                <div className="p-5 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 sm:rounded-b-2xl flex gap-3 pb-safe">
+                    <button className="flex-1 py-3 rounded-xl font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors" onClick={onClose}>
+                        {t('settings.cancel')}
                     </button>
-                    <button className="flex-[2] py-3 rounded-xl font-medium bg-zinc-900 text-white shadow-sm hover:bg-black transition-colors" onClick={() => handleSave(true)}>
-                        保存设置
+                    <button className="flex-[2] py-3 rounded-xl font-medium bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-sm hover:bg-black dark:hover:bg-white transition-colors" onClick={() => handleSave(true)}>
+                        {t('settings.saveSettings')}
                     </button>
                 </div>
             </div>
-            
+
             <style>{`
                 @keyframes slideUp {
                     from { transform: translateY(100%); opacity: 0; }

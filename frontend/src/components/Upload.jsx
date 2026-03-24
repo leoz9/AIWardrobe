@@ -1,9 +1,11 @@
 import { useState, useRef } from 'react'
 import { Upload as UploadIcon, Camera, Image as ImageIcon, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 const API_BASE = `http://${window.location.hostname}:8000/api`
 
 export default function Upload({ onUploadSuccess }) {
+    const { t } = useTranslation()
     const [isDragging, setIsDragging] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
     const [progress, setProgress] = useState(0)
@@ -57,7 +59,7 @@ export default function Upload({ onUploadSuccess }) {
             setShowCamera(true)
         } catch (err) {
             console.error('Camera error:', err)
-            alert('无法访问相机，请检查权限设置')
+            alert(t('upload.cameraError'))
         }
     }
 
@@ -97,20 +99,20 @@ export default function Upload({ onUploadSuccess }) {
 
     const uploadFile = async (file) => {
         if (!file.type.startsWith('image/')) {
-            alert('请选择图片文件')
+            alert(t('upload.selectImage'))
             return
         }
 
         setIsUploading(true)
         setProgress(10)
-        setStatus('正在上传图片...')
+        setStatus(t('upload.uploading'))
 
         const formData = new FormData()
         formData.append('file', file)
 
         try {
             setProgress(30)
-            setStatus('正在移除背景...')
+            setStatus(t('upload.removingBg'))
 
             const response = await fetch(`${API_BASE}/upload`, {
                 method: 'POST',
@@ -118,17 +120,17 @@ export default function Upload({ onUploadSuccess }) {
             })
 
             setProgress(70)
-            setStatus('正在分析衣物...')
+            setStatus(t('upload.analyzing'))
 
             if (!response.ok) {
                 const error = await response.json()
-                throw new Error(error.detail || '上传失败')
+                throw new Error(error.detail || t('upload.uploadFailed'))
             }
 
             const data = await response.json()
 
             setProgress(100)
-            setStatus('完成!')
+            setStatus(t('upload.done'))
 
             setTimeout(() => {
                 setIsUploading(false)
@@ -139,7 +141,7 @@ export default function Upload({ onUploadSuccess }) {
 
         } catch (error) {
             console.error('Upload error:', error)
-            alert(`上传失败: ${error.message}`)
+            alert(`${t('upload.uploadFailed')}: ${error.message}`)
             setIsUploading(false)
             setProgress(0)
             setStatus('')
@@ -171,29 +173,29 @@ export default function Upload({ onUploadSuccess }) {
     return (
         <div className="w-full">
             <div
-                className={`relative overflow-hidden rounded-2xl border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center p-8 bg-white ${
-                    isDragging ? 'border-accent bg-blue-50/50 scale-[1.02]' : 'border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50/50'
+                className={`relative overflow-hidden rounded-2xl border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center p-8 bg-white dark:bg-zinc-900 ${
+                    isDragging ? 'border-accent bg-blue-50/50 dark:bg-blue-950/30 scale-[1.02]' : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/50'
                 }`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 style={{ minHeight: '300px' }}
             >
-                <div className="w-16 h-16 mb-4 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400">
+                <div className="w-16 h-16 mb-4 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
                     <UploadIcon size={28} />
                 </div>
-                
-                <h3 className="text-lg font-serif font-semibold text-zinc-800 mb-1">添加新衣物</h3>
-                <p className="text-sm text-zinc-500 mb-8 text-center">支持拍照或本地上传图片<br/>AI将自动去除背景并分类</p>
+
+                <h3 className="text-lg font-serif font-semibold text-zinc-800 dark:text-zinc-200 mb-1">{t('upload.title')}</h3>
+                <p className="text-sm text-zinc-500 mb-8 text-center">{t('upload.subtitle')}<br/>{t('upload.subtitleAI')}</p>
 
                 <div className="flex flex-col sm:flex-row gap-4 w-full max-w-xs">
                     <button className="flex-1 btn-primary" onClick={handleCameraClick}>
                         <Camera size={18} />
-                        拍照
+                        {t('upload.camera')}
                     </button>
-                    <button className="flex-1 btn-secondary bg-white border border-zinc-200" onClick={handleUploadClick}>
+                    <button className="flex-1 btn-secondary bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700" onClick={handleUploadClick}>
                         <ImageIcon size={18} />
-                        相册
+                        {t('upload.album')}
                     </button>
                 </div>
 
@@ -217,10 +219,10 @@ export default function Upload({ onUploadSuccess }) {
             {isUploading && (
                 <div className="mt-6 space-y-2 animate-fade-in">
                     <div className="flex justify-between text-sm font-medium">
-                        <span className="text-zinc-600">{status}</span>
+                        <span className="text-zinc-600 dark:text-zinc-400">{status}</span>
                         <span className="text-accent">{progress}%</span>
                     </div>
-                    <div className="h-2 w-full bg-zinc-100 rounded-full overflow-hidden">
+                    <div className="h-2 w-full bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
                         <div
                             className="h-full bg-accent transition-all duration-300 relative top-0 left-0"
                             style={{ width: `${progress}%` }}

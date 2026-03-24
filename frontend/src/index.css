@@ -1,11 +1,13 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-primary: #18181B;
   --color-secondary: #3F3F46;
   --color-accent: #2563EB;
   --color-background: #FAFAFA;
-  
+
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Playfair Display", ui-serif, Georgia, serif;
 }
@@ -19,30 +21,39 @@
     --accent: #2563EB;
     --border: #E4E4E7;
   }
-  
+
+  .dark {
+    --bg-primary: #09090B;
+    --bg-card: #18181B;
+    --text-primary: #FAFAFA;
+    --text-secondary: #A1A1AA;
+    --accent: #3B82F6;
+    --border: #27272A;
+  }
+
   html, body {
-    @apply bg-[#FAFAFA] text-[#09090B] font-sans antialiased m-0 p-0 min-h-screen;
+    @apply bg-[var(--bg-primary)] text-[var(--text-primary)] font-sans antialiased m-0 p-0 min-h-screen;
   }
 }
 
 @layer utilities {
   .glass-header {
-    @apply bg-white/80 backdrop-blur-md border-b border-zinc-200 z-40 sticky top-0;
+    @apply bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800 z-40 sticky top-0;
   }
   .card {
-    @apply bg-white border border-zinc-200 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300;
+    @apply bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300;
   }
   .btn-primary {
     @apply bg-blue-600 text-white hover:bg-blue-700 transition-colors duration-200 rounded-lg font-medium px-4 py-2 flex items-center justify-center gap-2;
   }
   .btn-secondary {
-    @apply bg-zinc-100 text-zinc-900 hover:bg-zinc-200 transition-colors duration-200 rounded-lg font-medium px-4 py-2 flex items-center justify-center gap-2;
+    @apply bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors duration-200 rounded-lg font-medium px-4 py-2 flex items-center justify-center gap-2;
   }
   .btn-icon {
-    @apply p-2 rounded-lg hover:bg-zinc-100 text-zinc-600 hover:text-zinc-900 transition-colors;
+    @apply p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors;
   }
   .input-field {
-    @apply w-full px-4 py-2 bg-zinc-50 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all;
+    @apply w-full px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all;
   }
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
