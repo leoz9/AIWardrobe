@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { Upload as UploadIcon, Camera, Image as ImageIcon, X } from 'lucide-react'
 
 const API_BASE = `http://${window.location.hostname}:8000/api`
 
@@ -37,11 +38,9 @@ export default function Upload({ onUploadSuccess }) {
     }
 
     const handleCameraClick = () => {
-        // 移动端直接调用系统相机
         if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
             cameraInputRef.current?.click()
         } else {
-            // 桌面端打开视频流
             startCamera()
         }
     }
@@ -119,7 +118,7 @@ export default function Upload({ onUploadSuccess }) {
             })
 
             setProgress(70)
-            setStatus('正在分析衣物语义...')
+            setStatus('正在分析衣物...')
 
             if (!response.ok) {
                 const error = await response.json()
@@ -147,79 +146,92 @@ export default function Upload({ onUploadSuccess }) {
         }
     }
 
-    // 相机模式 UI
     if (showCamera) {
         return (
-            <div className="camera-section">
-                <div className="camera-view">
+            <div className="fixed inset-0 z-50 bg-black flex flex-col">
+                <div className="flex-1 relative">
                     <video
                         ref={videoRef}
                         autoPlay
                         playsInline
-                        className="camera-video"
+                        className="w-full h-full object-cover"
                     />
                 </div>
-                <div className="camera-controls">
-                    <button className="camera-btn cancel" onClick={stopCamera}>
-                        ✕ 取消
+                <div className="h-32 bg-black pb-safe flex items-center justify-around px-8">
+                    <button className="p-4 text-white hover:text-red-400 transition-colors" onClick={stopCamera}>
+                        <X size={28} />
                     </button>
-                    <button className="camera-btn capture" onClick={capturePhoto}>
-                        📸 拍照
-                    </button>
+                    <button className="w-16 h-16 rounded-full bg-white border-4 border-zinc-300 active:scale-95 transition-transform" onClick={capturePhoto}></button>
+                    <div className="w-14"></div>
                 </div>
             </div>
         )
     }
 
     return (
-        <div className="upload-section">
+        <div className="w-full">
             <div
-                className={`upload-zone ${isDragging ? 'dragging' : ''}`}
+                className={`relative overflow-hidden rounded-2xl border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center p-8 bg-white ${
+                    isDragging ? 'border-accent bg-blue-50/50 scale-[1.02]' : 'border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50/50'
+                }`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
+                style={{ minHeight: '300px' }}
             >
-                <div className="upload-icon">👕</div>
-                <p className="upload-text">添加衣物到衣柜</p>
+                <div className="w-16 h-16 mb-4 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400">
+                    <UploadIcon size={28} />
+                </div>
+                
+                <h3 className="text-lg font-serif font-semibold text-zinc-800 mb-1">添加新衣物</h3>
+                <p className="text-sm text-zinc-500 mb-8 text-center">支持拍照或本地上传图片<br/>AI将自动去除背景并分类</p>
 
-                <div className="upload-buttons">
-                    <button className="upload-btn" onClick={handleUploadClick}>
-                        📁 选择图片
+                <div className="flex flex-col sm:flex-row gap-4 w-full max-w-xs">
+                    <button className="flex-1 btn-primary" onClick={handleCameraClick}>
+                        <Camera size={18} />
+                        拍照
                     </button>
-                    <button className="upload-btn camera" onClick={handleCameraClick}>
-                        📷 拍照
+                    <button className="flex-1 btn-secondary bg-white border border-zinc-200" onClick={handleUploadClick}>
+                        <ImageIcon size={18} />
+                        相册
                     </button>
                 </div>
-
-                <p className="upload-hint">支持拖拽上传 JPG、PNG 格式</p>
 
                 <input
                     ref={fileInputRef}
                     type="file"
                     accept="image/*"
-                    className="upload-input"
+                    className="hidden"
                     onChange={handleFileChange}
                 />
-                {/* 移动端相机 input */}
                 <input
                     ref={cameraInputRef}
                     type="file"
                     accept="image/*"
                     capture="environment"
-                    className="upload-input"
+                    className="hidden"
                     onChange={handleFileChange}
                 />
             </div>
 
             {isUploading && (
-                <div className="upload-progress">
-                    <div className="progress-bar">
-                        <div
-                            className="progress-fill"
-                            style={{ width: `${progress}%` }}
-                        />
+                <div className="mt-6 space-y-2 animate-fade-in">
+                    <div className="flex justify-between text-sm font-medium">
+                        <span className="text-zinc-600">{status}</span>
+                        <span className="text-accent">{progress}%</span>
                     </div>
-                    <p className="progress-text">{status}</p>
+                    <div className="h-2 w-full bg-zinc-100 rounded-full overflow-hidden">
+                        <div
+                            className="h-full bg-accent transition-all duration-300 relative top-0 left-0"
+                            style={{ width: `${progress}%` }}
+                        >
+                            <div className="absolute inset-0 bg-white/20" style={{
+                                backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,0.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.15) 75%, transparent 75%, transparent)',
+                                backgroundSize: '1rem 1rem',
+                                animation: 'progress 1s linear infinite'
+                            }}></div>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

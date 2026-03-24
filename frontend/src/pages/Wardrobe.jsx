@@ -79,40 +79,60 @@ export default function Wardrobe() {
         { title: '鞋履', items: filterItems(wardrobe.shoes) }
     ]
 
-    if (loading) return <div className="loading">加载中...</div>
+    if (loading) return (
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+            <div className="w-10 h-10 border-4 border-zinc-200 border-t-accent rounded-full animate-spin"></div>
+            <p className="mt-4 text-zinc-500 text-sm">加载中...</p>
+        </div>
+    )
 
     return (
-        <div className="page-container wardrobe-page">
-            <header className="page-header sticky">
+        <div className="min-h-screen bg-[#FAFAFA] animate-fade-in pb-8">
+            <header className="glass-header px-4 py-4 sticky top-0">
                 <FilterBar onSearch={handleSearch} onFilterChange={handleFilterChange} />
             </header>
 
-            <div className="wardrobe-content">
+            <div className="p-4 space-y-8 mt-2">
                 {sections.map(section => (
-                    <section key={section.title} className="wardrobe-section">
-                        <h3 className="section-title">{section.title} ({section.items.length})</h3>
-                        <div className="clothes-grid">
-                            {section.items.map(item => (
-                                <div key={item.id} className="clothes-card">
-                                    <div className="card-image">
-                                        <img
-                                            src={`${API_BASE.replace('/api', '')}${item.image_url}`}
-                                            alt={item.item}
-                                            loading="lazy"
-                                        />
-                                    </div>
-                                    <div className="card-info">
-                                        <span className="card-name">{item.item}</span>
-                                        <button
-                                            className="delete-btn"
-                                            onClick={() => handleDelete(item.id)}
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
+                    <section key={section.title} className="space-y-4">
+                        <div className="flex items-center gap-2 px-1">
+                            <h3 className="text-xl font-serif font-semibold text-primary">{section.title}</h3>
+                            <span className="text-xs bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded-full font-medium">
+                                {section.items.length}
+                            </span>
                         </div>
+                        
+                        {section.items.length === 0 ? (
+                            <div className="card p-8 flex flex-col items-center justify-center text-zinc-400 border-dashed bg-zinc-50/50">
+                                <span className="text-3xl mb-2 opacity-50">📦</span>
+                                <p className="text-sm">暂无匹配衣物</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+                                {section.items.map(item => (
+                                    <div key={item.id} className="card group overflow-hidden bg-white hover:-translate-y-1 transition-transform duration-300">
+                                        <div className="relative aspect-square bg-zinc-100 p-4 flex items-center justify-center overflow-hidden">
+                                            <img
+                                                src={`${API_BASE.replace('/api', '')}${item.image_url}`}
+                                                alt={item.item}
+                                                loading="lazy"
+                                                className="w-full h-full object-contain drop-shadow-sm group-hover:scale-105 transition-transform duration-500"
+                                            />
+                                        </div>
+                                        <div className="p-3 flex items-center justify-between bg-white border-t border-zinc-100">
+                                            <span className="text-sm font-medium text-zinc-900 truncate pr-2">{item.item}</span>
+                                            <button
+                                                className="text-red-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded-md transition-colors"
+                                                onClick={() => handleDelete(item.id)}
+                                                title="删除"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </section>
                 ))}
             </div>

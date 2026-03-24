@@ -9,7 +9,7 @@ import './index.css'
 function App() {
   return (
     <Router>
-      <div className="app">
+      <div className="min-h-screen bg-[#FAFAFA] text-[#09090B] pb-24 max-w-md mx-auto relative shadow-sm">
         <Routes>
           <Route path="/" element={<Entry />} />
           <Route path="/wardrobe" element={<Wardrobe />} />

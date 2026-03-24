@@ -3,9 +3,14 @@
 .github
 .vscode
 .idea
+.agent
+.codex
+design-system
+docs
 
 backend/venv
 backend/__pycache__
+backend/**/__pycache__
 backend/.env
 backend/secrets.env
 backend/wardrobe.db
