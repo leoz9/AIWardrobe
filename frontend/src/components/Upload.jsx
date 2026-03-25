@@ -1,20 +1,55 @@
-import { useState, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Upload as UploadIcon, Camera, Image as ImageIcon, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-
-const API_BASE = `http://${window.location.hostname}:8000/api`
+import { useUpload } from '../contexts/UploadContext'
 
 export default function Upload({ onUploadSuccess }) {
     const { t } = useTranslation()
+    const {
+        isUploading,
+        progress,
+        statusKey,
+        current,
+        total,
+        completedSingleItem,
+        batchResult,
+        lastError,
+        uploadFiles,
+        consumeCompletedSingleItem,
+        consumeBatchResult,
+        consumeLastError
+    } = useUpload()
     const [isDragging, setIsDragging] = useState(false)
-    const [isUploading, setIsUploading] = useState(false)
-    const [progress, setProgress] = useState(0)
-    const [status, setStatus] = useState('')
     const [showCamera, setShowCamera] = useState(false)
     const fileInputRef = useRef(null)
     const cameraInputRef = useRef(null)
     const videoRef = useRef(null)
     const streamRef = useRef(null)
+
+    const status = statusKey
+        ? (total > 1 && current > 0 ? `${t(statusKey)} (${current}/${total})` : t(statusKey))
+        : ''
+
+    useEffect(() => {
+        if (!completedSingleItem) return
+        onUploadSuccess?.(completedSingleItem)
+        consumeCompletedSingleItem()
+    }, [completedSingleItem, onUploadSuccess, consumeCompletedSingleItem])
+
+    useEffect(() => {
+        if (!batchResult) return
+        alert(t('upload.batchResult', batchResult))
+        consumeBatchResult()
+    }, [batchResult, t, consumeBatchResult])
+
+    useEffect(() => {
+        if (!lastError) return
+        const translatedError = lastError === 'INVALID_IMAGE_TYPE'
+            ? t('upload.selectImage')
+            : lastError
+        alert(`${t('upload.uploadFailed')}: ${translatedError}`)
+        consumeLastError()
+    }, [lastError, t, consumeLastError])
 
     const handleDragOver = (e) => {
         e.preventDefault()
@@ -31,7 +66,7 @@ export default function Upload({ onUploadSuccess }) {
         setIsDragging(false)
         const files = e.dataTransfer.files
         if (files.length > 0) {
-            uploadFiles(Array.from(files))
+            void uploadFiles(Array.from(files))
         }
     }
 
@@ -83,7 +118,7 @@ export default function Upload({ onUploadSuccess }) {
         canvas.toBlob((blob) => {
             if (blob) {
                 const file = new File([blob], 'camera-photo.jpg', { type: 'image/jpeg' })
-                uploadFiles([file])
+                void uploadFiles([file])
                 stopCamera()
             }
         }, 'image/jpeg', 0.9)
@@ -92,102 +127,9 @@ export default function Upload({ onUploadSuccess }) {
     const handleFileChange = (e) => {
         const files = e.target.files
         if (files && files.length > 0) {
-            uploadFiles(Array.from(files))
+            void uploadFiles(Array.from(files))
         }
         e.target.value = ''
-    }
-
-    const uploadSingleFile = async (file, current = 1, total = 1) => {
-        if (!file.type.startsWith('image/')) {
-            throw new Error(t('upload.selectImage'))
-        }
-
-        const stageLabel = (key) => (
-            total > 1
-                ? `${t(key)} (${current}/${total})`
-                : t(key)
-        )
-
-        const formData = new FormData()
-        formData.append('file', file)
-
-        setStatus(stageLabel('upload.removingBg'))
-
-        const response = await fetch(`${API_BASE}/upload`, {
-            method: 'POST',
-            body: formData
-        })
-
-        setStatus(stageLabel('upload.analyzing'))
-
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({}))
-            throw new Error(error.detail || t('upload.uploadFailed'))
-        }
-
-        return response.json()
-    }
-
-    const uploadFiles = async (files) => {
-        if (!files || files.length === 0) return
-
-        const imageFiles = files.filter(file => file.type?.startsWith('image/'))
-        if (imageFiles.length === 0) {
-            alert(t('upload.selectImage'))
-            return
-        }
-
-        setIsUploading(true)
-        setProgress(0)
-        setStatus(t('upload.uploading'))
-
-        const total = imageFiles.length
-        const successItems = []
-        const failedMessages = []
-
-        for (let i = 0; i < total; i += 1) {
-            const file = imageFiles[i]
-            const current = i + 1
-            const baseProgress = Math.round((i / total) * 100)
-            setProgress(Math.max(baseProgress, 5))
-            setStatus(
-                total > 1
-                    ? `${t('upload.uploading')} (${current}/${total})`
-                    : t('upload.uploading')
-            )
-
-            try {
-                const data = await uploadSingleFile(file, current, total)
-                successItems.push(data)
-                setProgress(Math.round((current / total) * 100))
-            } catch (error) {
-                console.error('Upload error:', error)
-                failedMessages.push(`${file.name}: ${error.message}`)
-            }
-        }
-
-        setProgress(100)
-        setStatus(t('upload.done'))
-
-        setTimeout(() => {
-            setIsUploading(false)
-            setProgress(0)
-            setStatus('')
-
-            if (total === 1) {
-                if (successItems.length === 1) {
-                    onUploadSuccess?.(successItems[0])
-                } else {
-                    alert(`${t('upload.uploadFailed')}: ${failedMessages[0] || t('upload.uploadFailed')}`)
-                }
-                return
-            }
-
-            alert(t('upload.batchResult', {
-                success: successItems.length,
-                failed: total - successItems.length
-            }))
-        }, 500)
     }
 
     if (showCamera) {
