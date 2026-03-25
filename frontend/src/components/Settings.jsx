@@ -1,12 +1,27 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '../contexts/ThemeContext'
-import { Sun, Moon, Globe } from 'lucide-react'
+import { Sun, Moon, Globe, Sparkles } from 'lucide-react'
 
 const LANGUAGES = [
     { code: 'zh', label: '中文' },
     { code: 'en', label: 'English' },
     { code: 'ja', label: '日本語' }
+]
+
+const ZODIAC_SIGNS = [
+    'aries',
+    'taurus',
+    'gemini',
+    'cancer',
+    'leo',
+    'virgo',
+    'libra',
+    'scorpio',
+    'sagittarius',
+    'capricorn',
+    'aquarius',
+    'pisces'
 ]
 
 const Settings = ({ isOpen, onClose, onSave }) => {
@@ -19,7 +34,8 @@ const Settings = ({ isOpen, onClose, onSave }) => {
         removebg_api_key: '',
         bg_removal_method: 'local',
         qweather_api_key: '',
-        qweather_api_host: 'devapi.qweather.com'
+        qweather_api_host: 'devapi.qweather.com',
+        zodiac_sign: ''
     })
     const [models, setModels] = useState([])
     const [loading, setLoading] = useState(false)
@@ -54,7 +70,8 @@ const Settings = ({ isOpen, onClose, onSave }) => {
                     api_base: data.api_base || 'https://api.openai.com/v1',
                     model: data.model || 'gpt-4o',
                     bg_removal_method: data.bg_removal_method || 'local',
-                    qweather_api_host: data.qweather_api_host || 'devapi.qweather.com'
+                    qweather_api_host: data.qweather_api_host || 'devapi.qweather.com',
+                    zodiac_sign: data.zodiac_sign || ''
                 }))
                 setHasExistingKey(data.has_api_key)
                 setHasRemoveBgKey(data.has_removebg_key)
@@ -99,7 +116,7 @@ const Settings = ({ isOpen, onClose, onSave }) => {
             if (data.success) {
                 fetchModels()
             }
-        } catch (error) {
+        } catch {
             setTestResult({
                 success: false,
                 message: t('settings.testFailed')
@@ -115,7 +132,8 @@ const Settings = ({ isOpen, onClose, onSave }) => {
                 api_base: config.api_base,
                 model: config.model,
                 bg_removal_method: config.bg_removal_method,
-                qweather_api_host: config.qweather_api_host
+                qweather_api_host: config.qweather_api_host,
+                zodiac_sign: config.zodiac_sign
             }
 
             if (config.api_key) {
@@ -224,6 +242,25 @@ const Settings = ({ isOpen, onClose, onSave }) => {
                                     {t('settings.themeDark')}
                                 </button>
                             </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                                <Sparkles size={16} className="text-accent" />
+                                {t('settings.zodiac')}
+                            </label>
+                            <select
+                                className="input-field appearance-none"
+                                value={config.zodiac_sign}
+                                onChange={e => setConfig(prev => ({ ...prev, zodiac_sign: e.target.value }))}
+                            >
+                                <option value="">{t('settings.zodiacPlaceholder')}</option>
+                                {ZODIAC_SIGNS.map(sign => (
+                                    <option key={sign} value={sign}>
+                                        {t(`settings.zodiacOptions.${sign}`)}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 

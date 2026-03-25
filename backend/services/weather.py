@@ -5,6 +5,7 @@ GeoAPI: https://dev.qweather.com/docs/api/geoapi/city-lookup/
 """
 import httpx
 import os
+import re
 from typing import Optional, List
 from pydantic import BaseModel
 
@@ -84,6 +85,83 @@ COMMON_CITIES = [
     {"name": "哈尔滨", "adm1": "黑龙江", "country": "中国", "id": "101050101", "keywords": ["haerbin", "哈尔滨", "heb"]},
 ]
 
+LOCATION_SUFFIXES = (
+    "特别行政区", "自治区", "自治州", "地区", "盟", "省", "市", "区", "县"
+)
+
+
+def normalize_location_query(query: str) -> str:
+    """归一化地区输入，提升省市区县等写法的匹配率。"""
+    normalized = (query or "").strip().lower()
+    normalized = re.sub(r"[\s,，/·\-]+", "", normalized)
+
+    for suffix in LOCATION_SUFFIXES:
+        if normalized.endswith(suffix):
+            normalized = normalized[: -len(suffix)]
+
+    return normalized
+
+
+def is_location_id(location: str) -> bool:
+    return bool(re.fullmatch(r"\d{9}", location.strip()))
+
+
+def is_coordinate_location(location: str) -> bool:
+    return bool(re.fullmatch(r"\s*-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?\s*", location.strip()))
+
+
+def format_city_display_name(city: CityInfo) -> str:
+    parts = []
+
+    if city.name:
+        parts.append(city.name)
+
+    for value in (city.adm2, city.adm1):
+        if value and value not in parts:
+            parts.append(value)
+
+    if city.country and city.country not in parts:
+        parts.append(city.country)
+
+    return " · ".join(parts)
+
+
+def city_matches_query(city: CityInfo, query: str) -> bool:
+    return city_match_score(city, query) > 0
+
+
+def city_match_score(city: CityInfo, query: str) -> int:
+    normalized_query = normalize_location_query(query)
+    candidates = [
+        city.name,
+        city.adm1,
+        city.adm2,
+        f"{city.adm1}{city.name}",
+        f"{city.adm2}{city.name}",
+        f"{city.adm1}{city.adm2}{city.name}",
+    ]
+
+    best_score = 0
+    for candidate in candidates:
+        normalized_candidate = normalize_location_query(candidate or "")
+        if not normalized_candidate:
+            continue
+        if normalized_query == normalized_candidate:
+            best_score = max(best_score, 100)
+        elif normalized_query in normalized_candidate:
+            best_score = max(best_score, 70)
+        elif normalized_candidate in normalized_query:
+            best_score = max(best_score, 55)
+
+    if normalize_location_query(city.name) and normalize_location_query(city.name) in normalized_query:
+        best_score += 20
+    if normalize_location_query(city.adm2) and normalize_location_query(city.adm2) in normalized_query:
+        best_score += 10
+    if normalize_location_query(city.adm1) and normalize_location_query(city.adm1) in normalized_query:
+        best_score += 5
+
+    return best_score
+
 
 async def search_city(query: str, limit: int = 10) -> List[CityInfo]:
     """
@@ -97,6 +175,10 @@ async def search_city(query: str, limit: int = 10) -> List[CityInfo]:
     Returns:
         城市信息列表
     """
+    normalized_query = normalize_location_query(query)
+    if not normalized_query:
+        return []
+
     # 优先从配置系统读取 API Key
     try:
         from storage.config_store import load_config
@@ -111,15 +193,38 @@ async def search_city(query: str, limit: int = 10) -> List[CityInfo]:
     if api_key and api_key != "your_qweather_api_key_here":
         try:
             url = f"https://{api_host}/geo/v2/city/lookup"
-            params = {"location": query, "number": limit, "lang": "zh"}
-            headers = {"Authorization": f"Bearer {api_key}"}
+            params = {
+                "location": query.strip(),
+                "number": limit,
+                "lang": "zh",
+                "key": api_key
+            }
             
             async with httpx.AsyncClient() as client:
-                response = await client.get(url, params=params, headers=headers, timeout=10.0)
+                response = await client.get(url, params=params, timeout=10.0)
                 
                 if response.status_code == 200:
                     data = response.json()
                     if data.get("code") == "200" and data.get("location"):
+                        cities = []
+                        for location in data.get("location", []):
+                            city = CityInfo(
+                                name=location.get("name"),
+                                id=location.get("id"),
+                                adm1=location.get("adm1"),
+                                adm2=location.get("adm2"),
+                                country=location.get("country"),
+                                lat=location.get("lat"),
+                                lon=location.get("lon")
+                            )
+                            if city_matches_query(city, query):
+                                cities.append(city)
+
+                        if cities:
+                            cities.sort(key=lambda city: city_match_score(city, query), reverse=True)
+                            return cities[:limit]
+
+                        # GeoAPI 返回为空或排序不理想时，退回原始结果
                         cities = []
                         for location in data.get("location", []):
                             cities.append(CityInfo(
@@ -136,23 +241,53 @@ async def search_city(query: str, limit: int = 10) -> List[CityInfo]:
             print(f"⚠️  GeoAPI调用失败，使用预定义城市列表: {e}")
     
     # 降级方案：使用预定义城市列表进行模糊搜索
-    query_lower = query.lower()
     matched_cities = []
     
     for city_data in COMMON_CITIES:
-        # 检查是否匹配任何关键词
-        if any(query_lower in keyword.lower() for keyword in city_data["keywords"]):
+        keyword_matched = any(
+            normalized_query in normalize_location_query(keyword)
+            or normalize_location_query(keyword) in normalized_query
+            for keyword in city_data["keywords"]
+        )
+        region_matched = any(
+            normalized_query in normalize_location_query(city_data.get(field, ""))
+            or normalize_location_query(city_data.get(field, "")) in normalized_query
+            for field in ("name", "adm1")
+            if city_data.get(field)
+        )
+
+        if keyword_matched or region_matched:
             matched_cities.append(CityInfo(
                 name=city_data["name"],
                 id=city_data["id"],
                 adm1=city_data["adm1"],
-                adm2=city_data["adm1"],  # 使用adm1作为adm2
+                adm2=city_data["name"],
                 country=city_data["country"],
                 lat="0",  # 预定义列表不包含坐标
                 lon="0"
             ))
-    
+
+    matched_cities.sort(key=lambda city: city_match_score(city, query), reverse=True)
     return matched_cities[:limit]
+
+
+async def resolve_location(location: str) -> tuple[str, str]:
+    """
+    将用户输入解析为和风天气可识别的 location 参数，并返回显示名称。
+    """
+    raw_location = (location or "").strip()
+    if not raw_location:
+        return "101020100", "上海"
+
+    if is_location_id(raw_location) or is_coordinate_location(raw_location):
+        return raw_location, raw_location
+
+    cities = await search_city(raw_location, limit=1)
+    if cities:
+        city = cities[0]
+        return city.id, format_city_display_name(city)
+
+    return raw_location, raw_location
 
 
 async def get_qweather_now(location: str) -> Optional[WeatherResponse]:
@@ -218,7 +353,8 @@ async def get_weather(location: str = "101020100") -> Optional[WeatherInfo]:
     Returns:
         WeatherInfo 或 None
     """
-    weather_response = await get_qweather_now(location)
+    resolved_location, display_location = await resolve_location(location)
+    weather_response = await get_qweather_now(resolved_location)
     
     if not weather_response:
         # 返回模拟数据作为降级方案
@@ -231,7 +367,7 @@ async def get_weather(location: str = "101020100") -> Optional[WeatherInfo]:
             humidity=60.0,
             windDir="南风",
             windScale="2",
-            location=location,
+            location=display_location,
             obsTime="2024-01-01T12:00+08:00"
         )
     
@@ -244,7 +380,7 @@ async def get_weather(location: str = "101020100") -> Optional[WeatherInfo]:
         humidity=float(now.humidity),
         windDir=now.windDir,
         windScale=now.windScale,
-        location=location,
+        location=display_location,
         obsTime=now.obsTime
     )
 

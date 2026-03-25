@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom'
-import { PlusCircle, Search, User, Sparkles } from 'lucide-react'
+import { House, PlusCircle, Search, User, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 export default function TabBar() {
@@ -8,7 +8,8 @@ export default function TabBar() {
     const { t } = useTranslation()
 
     const tabs = [
-        { path: '/', icon: PlusCircle, label: t('tabs.entry') },
+        { path: '/', icon: House, label: t('tabs.home') },
+        { path: '/entry', icon: PlusCircle, label: t('tabs.entry') },
         { path: '/wardrobe', icon: Search, label: t('tabs.wardrobe') },
         { path: '/outfit', icon: User, label: t('tabs.outfit') },
         { path: '/recommendation', icon: Sparkles, label: t('tabs.recommendation') }

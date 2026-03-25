@@ -1,5 +1,6 @@
 {
   "tabs": {
+    "home": "Home",
     "entry": "Entry",
     "wardrobe": "Wardrobe",
     "outfit": "Outfit",
@@ -84,9 +85,12 @@
     "description": "AI will analyze real-time weather and your wardrobe to create the perfect Look.",
     "generate": "Generate Today's Recommendation",
     "currentLocation": "Current Location",
-    "searchCity": "Search city",
+    "searchCity": "Enter city, district, or province",
+    "searchAction": "Check Weather",
+    "searchHint": "Supports city names, districts, province-city combinations, pinyin, or QWeather LocationID.",
+    "searching": "Searching locations...",
     "noCity": "No matching city found",
-    "enterCity": "Enter city name to search",
+    "enterCity": "Enter a location to search",
     "aiLoading": "AI is styling for you...",
     "aiTitle": "AI Recommendation",
     "regenerate": "Regenerate",
@@ -97,6 +101,36 @@
     "wind": "Wind",
     "windLevel": "",
     "feelsLike": "Feels like"
+  },
+  "home": {
+    "today": "Today",
+    "title": "Smart Wardrobe Home",
+    "refresh": "Refresh",
+    "loading": "Loading home data...",
+    "weatherTitle": "Today's Weather",
+    "weatherFeelsLike": "Feels Like",
+    "weatherHumidity": "Humidity",
+    "weatherWind": "Wind",
+    "carouselTitle": "Wardrobe Carousel",
+    "categoryTop": "Top",
+    "categoryBottom": "Bottom",
+    "categoryShoes": "Shoes",
+    "viewAll": "View all",
+    "emptyWardrobe": "Your wardrobe is empty. Add a few pieces first.",
+    "goEntry": "Add Clothes",
+    "noDescription": "No description yet",
+    "previous": "Previous item",
+    "next": "Next item",
+    "slide": "Slide",
+    "horoscopeTitle": "Today's Horoscope",
+    "mood": "Mood",
+    "luckyColor": "Lucky Color",
+    "luckyNumber": "Lucky Number",
+    "setZodiac": "Set Zodiac Sign",
+    "unknownWeather": "Unknown",
+    "unknownLocation": "Unknown location",
+    "unknownZodiac": "No zodiac",
+    "horoscopeFallback": "Horoscope is temporarily unavailable. Please try again later."
   },
   "settings": {
     "title": "API Settings",
@@ -130,6 +164,22 @@
     "theme": "Theme",
     "themeLight": "Light",
     "themeDark": "Dark",
-    "appSection": "App Settings"
+    "appSection": "App Settings",
+    "zodiac": "Zodiac Sign",
+    "zodiacPlaceholder": "Select your zodiac sign",
+    "zodiacOptions": {
+      "aries": "Aries",
+      "taurus": "Taurus",
+      "gemini": "Gemini",
+      "cancer": "Cancer",
+      "leo": "Leo",
+      "virgo": "Virgo",
+      "libra": "Libra",
+      "scorpio": "Scorpio",
+      "sagittarius": "Sagittarius",
+      "capricorn": "Capricorn",
+      "aquarius": "Aquarius",
+      "pisces": "Pisces"
+    }
   }
 }

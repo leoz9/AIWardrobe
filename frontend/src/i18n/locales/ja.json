@@ -1,5 +1,6 @@
 {
   "tabs": {
+    "home": "ホーム",
     "entry": "登録",
     "wardrobe": "衣装棚",
     "outfit": "コーデ",
@@ -84,9 +85,12 @@
     "description": "AIがリアルタイムの天気とワードローブを分析し、最適なコーデを提案します。",
     "generate": "今日のコーデを生成",
     "currentLocation": "現在地",
-    "searchCity": "都市を検索",
+    "searchCity": "都市・地区・都道府県を入力",
+    "searchAction": "天気を確認",
+    "searchHint": "都市名、地区名、都道府県との組み合わせ、ピンイン、QWeather LocationID に対応します。",
+    "searching": "地点を検索中...",
     "noCity": "該当する都市が見つかりません",
-    "enterCity": "都市名を入力して検索",
+    "enterCity": "地点名を入力して検索",
     "aiLoading": "AIがコーディネート中...",
     "aiTitle": "AI おすすめコーデ",
     "regenerate": "再生成",
@@ -97,6 +101,36 @@
     "wind": "風力",
     "windLevel": "級",
     "feelsLike": "体感"
+  },
+  "home": {
+    "today": "今日",
+    "title": "スマートワードローブ",
+    "refresh": "更新",
+    "loading": "ホームデータを読み込み中...",
+    "weatherTitle": "今日の天気",
+    "weatherFeelsLike": "体感",
+    "weatherHumidity": "湿度",
+    "weatherWind": "風力",
+    "carouselTitle": "ワードローブカルーセル",
+    "categoryTop": "トップス",
+    "categoryBottom": "ボトムス",
+    "categoryShoes": "シューズ",
+    "viewAll": "すべて表示",
+    "emptyWardrobe": "ワードローブが空です。先に数点登録しましょう。",
+    "goEntry": "登録へ",
+    "noDescription": "説明はまだありません",
+    "previous": "前のアイテム",
+    "next": "次のアイテム",
+    "slide": "スライド",
+    "horoscopeTitle": "今日の星座運勢",
+    "mood": "気分",
+    "luckyColor": "ラッキーカラー",
+    "luckyNumber": "ラッキーナンバー",
+    "setZodiac": "星座を設定",
+    "unknownWeather": "不明",
+    "unknownLocation": "場所不明",
+    "unknownZodiac": "星座未設定",
+    "horoscopeFallback": "運勢を取得できませんでした。しばらくして再試行してください。"
   },
   "settings": {
     "title": "API 設定",
@@ -130,6 +164,22 @@
     "theme": "テーマ",
     "themeLight": "ライト",
     "themeDark": "ダーク",
-    "appSection": "アプリ設定"
+    "appSection": "アプリ設定",
+    "zodiac": "星座",
+    "zodiacPlaceholder": "星座を選択してください",
+    "zodiacOptions": {
+      "aries": "牡羊座",
+      "taurus": "牡牛座",
+      "gemini": "双子座",
+      "cancer": "蟹座",
+      "leo": "獅子座",
+      "virgo": "乙女座",
+      "libra": "天秤座",
+      "scorpio": "蠍座",
+      "sagittarius": "射手座",
+      "capricorn": "山羊座",
+      "aquarius": "水瓶座",
+      "pisces": "魚座"
+    }
   }
 }

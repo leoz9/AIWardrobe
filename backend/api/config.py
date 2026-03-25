@@ -26,7 +26,8 @@ async def set_config(config_update: LLMConfigUpdate):
             removebg_api_key=config_update.removebg_api_key,
             bg_removal_method=config_update.bg_removal_method,
             qweather_api_key=config_update.qweather_api_key,
-            qweather_api_host=config_update.qweather_api_host
+            qweather_api_host=config_update.qweather_api_host,
+            zodiac_sign=config_update.zodiac_sign
         )
         return {
             "success": True,

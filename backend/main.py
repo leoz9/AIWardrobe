@@ -13,6 +13,7 @@ from api.wardrobe import router as wardrobe_router
 from api.config import router as config_router
 from api.weather import router as weather_router
 from api.recommendation import router as recommendation_router
+from api.horoscope import router as horoscope_router
 from storage.db import init_db
 
 # 上传目录
@@ -56,6 +57,7 @@ app.include_router(wardrobe_router, prefix="/api", tags=["衣柜"])
 app.include_router(config_router, prefix="/api", tags=["配置"])
 app.include_router(weather_router, prefix="/api", tags=["天气"])
 app.include_router(recommendation_router, prefix="/api", tags=["AI推荐"])
+app.include_router(horoscope_router, prefix="/api", tags=["星座运势"])
 
 
 @app.get("/api")
@@ -72,7 +74,8 @@ async def api_info():
             "delete_clothes": "DELETE /api/clothes/{id}",
             "weather": "GET /api/weather",
             "weather_suggestion": "GET /api/weather/suggestion",
-            "ai_recommendation": "GET /api/recommendation"
+            "ai_recommendation": "GET /api/recommendation",
+            "daily_horoscope": "GET /api/horoscope/daily"
         }
     }
 

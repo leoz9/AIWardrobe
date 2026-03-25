@@ -1,5 +1,6 @@
 {
   "tabs": {
+    "home": "首页",
     "entry": "录入",
     "wardrobe": "衣柜",
     "outfit": "穿搭",
@@ -84,9 +85,12 @@
     "description": "AI 将分析实时气温与衣柜藏品为您打造最适合的 Look。",
     "generate": "生成今日穿搭推荐",
     "currentLocation": "当前位置",
-    "searchCity": "搜索城市（支持拼音）",
+    "searchCity": "输入城市、区县或省份",
+    "searchAction": "查询天气并生成推荐",
+    "searchHint": "支持城市名、区县名、省市组合、拼音或和风天气 LocationID。",
+    "searching": "正在搜索地区...",
     "noCity": "未找到匹配的城市",
-    "enterCity": "请输入城市名称进行搜索",
+    "enterCity": "请输入地区名称进行搜索",
     "aiLoading": "AI 正在为您配搭...",
     "aiTitle": "AI 推荐穿搭",
     "regenerate": "重新生成",
@@ -97,6 +101,36 @@
     "wind": "风力",
     "windLevel": "级",
     "feelsLike": "体感"
+  },
+  "home": {
+    "today": "今天",
+    "title": "智能衣橱首页",
+    "refresh": "刷新",
+    "loading": "正在加载首页数据...",
+    "weatherTitle": "今天天气",
+    "weatherFeelsLike": "体感",
+    "weatherHumidity": "湿度",
+    "weatherWind": "风力",
+    "carouselTitle": "衣柜滚动轮播",
+    "categoryTop": "上装",
+    "categoryBottom": "下装",
+    "categoryShoes": "鞋履",
+    "viewAll": "查看全部",
+    "emptyWardrobe": "你的衣柜还是空的，先录入几件单品吧。",
+    "goEntry": "去录入",
+    "noDescription": "暂无描述",
+    "previous": "上一件",
+    "next": "下一件",
+    "slide": "轮播",
+    "horoscopeTitle": "今日星座运势",
+    "mood": "状态",
+    "luckyColor": "幸运色",
+    "luckyNumber": "幸运数字",
+    "setZodiac": "去设置星座",
+    "unknownWeather": "未知天气",
+    "unknownLocation": "未知位置",
+    "unknownZodiac": "未设置星座",
+    "horoscopeFallback": "暂时无法获取运势，稍后再试。"
   },
   "settings": {
     "title": "API 设置",
@@ -130,6 +164,22 @@
     "theme": "主题",
     "themeLight": "浅色",
     "themeDark": "深色",
-    "appSection": "应用设置"
+    "appSection": "应用设置",
+    "zodiac": "星座",
+    "zodiacPlaceholder": "请选择你的星座",
+    "zodiacOptions": {
+      "aries": "白羊座",
+      "taurus": "金牛座",
+      "gemini": "双子座",
+      "cancer": "巨蟹座",
+      "leo": "狮子座",
+      "virgo": "处女座",
+      "libra": "天秤座",
+      "scorpio": "天蝎座",
+      "sagittarius": "射手座",
+      "capricorn": "摩羯座",
+      "aquarius": "水瓶座",
+      "pisces": "双鱼座"
+    }
   }
 }

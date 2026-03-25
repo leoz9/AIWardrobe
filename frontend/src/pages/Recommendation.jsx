@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Search, MapPin, Sparkles, RefreshCw } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
@@ -20,6 +20,9 @@ export default function Recommendation() {
         id: '101020100'
     })
     const [showCityPicker, setShowCityPicker] = useState(false)
+    const [searchingCities, setSearchingCities] = useState(false)
+    const cityPickerRef = useRef(null)
+    const cityInputRef = useRef(null)
 
     const [displayedRecommendation, setDisplayedRecommendation] = useState('')
 
@@ -45,47 +48,115 @@ export default function Recommendation() {
         return () => clearInterval(timer)
     }, [recommendation])
 
-    const searchCity = async (query) => {
-        if (!query || query.trim().length < 1) {
-            setSearchResults([])
+    useEffect(() => {
+        if (!showCityPicker) {
             return
         }
 
-        try {
-            const response = await fetch(`${API_BASE}/cities?query=${encodeURIComponent(query)}&limit=10`)
-            if (response.ok) {
-                const cities = await response.json()
-                setSearchResults(cities)
-            } else {
-                setSearchResults([])
-            }
-        } catch (error) {
-            console.error('City search failed:', error)
+        const trimmedQuery = cityQuery.trim()
+        if (!trimmedQuery) {
             setSearchResults([])
+            setSearchingCities(false)
+            return
         }
+
+        const timer = setTimeout(async () => {
+            setSearchingCities(true)
+            try {
+                const response = await fetch(`${API_BASE}/cities?query=${encodeURIComponent(trimmedQuery)}&limit=10`)
+                if (response.ok) {
+                    const cities = await response.json()
+                    setSearchResults(cities)
+                } else {
+                    setSearchResults([])
+                }
+            } catch (error) {
+                console.error('City search failed:', error)
+                setSearchResults([])
+            } finally {
+                setSearchingCities(false)
+            }
+        }, 250)
+
+        return () => clearTimeout(timer)
+    }, [cityQuery, showCityPicker])
+
+    useEffect(() => {
+        if (!showCityPicker) {
+            return
+        }
+
+        // 使用 requestAnimationFrame，确保下拉渲染后再聚焦输入框
+        const rafId = requestAnimationFrame(() => {
+            cityInputRef.current?.focus()
+        })
+
+        return () => cancelAnimationFrame(rafId)
+    }, [showCityPicker])
+
+    useEffect(() => {
+        const handleOutsidePointerDown = (event) => {
+            if (!showCityPicker) {
+                return
+            }
+            if (cityPickerRef.current && !cityPickerRef.current.contains(event.target)) {
+                setShowCityPicker(false)
+            }
+        }
+
+        document.addEventListener('mousedown', handleOutsidePointerDown)
+
+        return () => {
+            document.removeEventListener('mousedown', handleOutsidePointerDown)
+        }
+    }, [showCityPicker])
+
+    const formatCityName = (city) => {
+        const segments = [city.name]
+
+        if (city.adm2 && city.adm2 !== city.name) {
+            segments.push(city.adm2)
+        }
+        if (city.adm1 && city.adm1 !== city.adm2 && city.adm1 !== city.name) {
+            segments.push(city.adm1)
+        }
+
+        return segments.join(' · ')
     }
 
     const selectCity = (city) => {
+        const cityName = formatCityName(city)
         setSelectedCity({
-            name: `${city.name}, ${city.adm1}`,
+            name: cityName,
             id: city.id
         })
         setShowCityPicker(false)
         setCityQuery('')
         setSearchResults([])
-        fetchRecommendation(city.id)
+        fetchRecommendation(city.id, cityName)
     }
 
-    const fetchRecommendation = async (locationId) => {
+    const fetchRecommendation = async (location, preferredName = null) => {
         setLoading(true)
         try {
-            const response = await fetch(`${API_BASE}/recommendation?location=${locationId}`)
+            const response = await fetch(`${API_BASE}/recommendation?location=${encodeURIComponent(location)}`)
             if (response.ok) {
                 const data = await response.json()
                 setWeather(data.weather)
                 setRecommendation(data.recommendation_text)
                 setSuggestedTop(data.suggested_top)
                 setSuggestedBottom(data.suggested_bottom)
+                if (preferredName) {
+                    setSelectedCity({
+                        name: preferredName,
+                        id: location
+                    })
+                } else if (data.weather?.location) {
+                    setSelectedCity({
+                        name: data.weather.location,
+                        id: location
+                    })
+                }
             }
         } catch (error) {
             console.error('Failed to fetch recommendation:', error)
@@ -94,8 +165,30 @@ export default function Recommendation() {
         }
     }
 
+    const submitCityQuery = () => {
+        const trimmedQuery = cityQuery.trim()
+        if (!trimmedQuery) {
+            fetchRecommendation(selectedCity.id)
+            return
+        }
+
+        const firstResult = searchResults[0]
+        if (firstResult) {
+            selectCity(firstResult)
+            return
+        }
+
+        setSelectedCity({
+            name: trimmedQuery,
+            id: trimmedQuery
+        })
+        setShowCityPicker(false)
+        setSearchResults([])
+        fetchRecommendation(trimmedQuery)
+    }
+
     const refreshRecommendation = () => {
-        fetchRecommendation(selectedCity.id)
+        fetchRecommendation(selectedCity.id, selectedCity.name)
     }
 
     const getWeatherIcon = (icon) => {
@@ -122,40 +215,70 @@ export default function Recommendation() {
             <div className="absolute bottom-[20%] left-[-10%] w-72 h-72 bg-purple-100 dark:bg-purple-900/30 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-30 pointer-events-none"></div>
 
             <div className="p-4 z-10 w-full mb-4">
-                <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md px-4 py-2.5 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800 inline-flex items-center cursor-pointer transition-shadow hover:shadow-md mx-auto relative group" onClick={() => setShowCityPicker(!showCityPicker)}>
-                    <MapPin size={16} className="text-accent mr-2" />
-                    <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100 pr-4">{selectedCity.name}</span>
-                    <span className="text-[10px] text-zinc-400 font-black tracking-widest leading-none bg-zinc-100 dark:bg-zinc-800 px-1 py-1 rounded shadow-sm">{showCityPicker ? '▲' : '▼'}</span>
+                <div className="relative mx-auto w-fit" ref={cityPickerRef}>
+                    <button
+                        type="button"
+                        className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md px-4 py-2.5 rounded-2xl shadow-sm border border-zinc-200 dark:border-zinc-800 inline-flex items-center transition-shadow hover:shadow-md"
+                        onClick={() => setShowCityPicker((open) => !open)}
+                        aria-expanded={showCityPicker}
+                    >
+                        <MapPin size={16} className="text-accent mr-2" />
+                        <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100 pr-4">{selectedCity.name}</span>
+                        <span className="text-[10px] text-zinc-400 font-black tracking-widest leading-none bg-zinc-100 dark:bg-zinc-800 px-1 py-1 rounded shadow-sm">{showCityPicker ? '▲' : '▼'}</span>
+                    </button>
 
                     {showCityPicker && (
-                        <div className="absolute top-14 left-0 w-80 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-800 p-3 z-50 animate-fade-in" onClick={e => e.stopPropagation()}>
+                        <div
+                            className="absolute top-14 left-0 w-80 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200 dark:border-zinc-800 p-3 z-50 animate-fade-in"
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}
+                            onClick={(e) => e.stopPropagation()}
+                        >
                             <div className="relative mb-3">
                                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
                                 <input
+                                    ref={cityInputRef}
                                     type="text"
                                     placeholder={t('recommendation.searchCity')}
                                     className="w-full pl-10 pr-4 py-2 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-accent transition-shadow text-zinc-800 dark:text-zinc-200"
                                     value={cityQuery}
-                                    onChange={(e) => {
-                                        setCityQuery(e.target.value)
-                                        searchCity(e.target.value)
+                                    onChange={(e) => setCityQuery(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault()
+                                            submitCityQuery()
+                                        }
                                     }}
-                                    autoFocus
                                 />
+                            </div>
+
+                            <button
+                                type="button"
+                                className="w-full mb-3 py-2.5 rounded-xl bg-accent text-white text-sm font-semibold hover:opacity-95 transition-opacity"
+                                onClick={submitCityQuery}
+                            >
+                                {t('recommendation.searchAction')}
+                            </button>
+
+                            <div className="text-xs text-zinc-400 mb-3 px-1">
+                                {t('recommendation.searchHint')}
                             </div>
 
                             <div className="max-h-60 overflow-y-auto space-y-1">
                                 {searchResults.length > 0 ? (
-                                    searchResults.map((city) => (
-                                        <div
-                                            key={city.id}
-                                            className="px-4 py-3 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer transition-colors flex flex-col"
+                                    searchResults.map((city, index) => (
+                                        <button
+                                            type="button"
+                                            key={`${city.id}-${city.adm1}-${city.adm2}-${index}`}
+                                            className="w-full text-left px-4 py-3 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer transition-colors flex flex-col"
                                             onClick={() => selectCity(city)}
                                         >
-                                            <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{city.name}</span>
-                                            <span className="text-xs text-zinc-500 mt-0.5">{city.adm1} · {city.country}</span>
-                                        </div>
+                                            <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{formatCityName(city)}</span>
+                                            <span className="text-xs text-zinc-500 mt-0.5">{city.country}</span>
+                                        </button>
                                     ))
+                                ) : searchingCities ? (
+                                    <div className="text-center py-6 text-zinc-400 text-sm">{t('recommendation.searching')}</div>
                                 ) : cityQuery ? (
                                     <div className="text-center py-6 text-zinc-400 text-sm">{t('recommendation.noCity')}</div>
                                 ) : (

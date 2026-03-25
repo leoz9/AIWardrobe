@@ -34,7 +34,8 @@ def update_config(
     removebg_api_key: Optional[str] = None,
     bg_removal_method: Optional[str] = None,
     qweather_api_key: Optional[str] = None,
-    qweather_api_host: Optional[str] = None
+    qweather_api_host: Optional[str] = None,
+    zodiac_sign: Optional[str] = None
 ) -> LLMConfig:
     """更新配置"""
     config = load_config()
@@ -53,6 +54,8 @@ def update_config(
         config.qweather_api_key = qweather_api_key.strip()
     if qweather_api_host is not None:
         config.qweather_api_host = qweather_api_host.strip()
+    if zodiac_sign is not None:
+        config.zodiac_sign = zodiac_sign.strip().lower()
     
     save_config(config)
     return config
@@ -81,5 +84,6 @@ def get_masked_config() -> dict:
         "bg_removal_method": config.bg_removal_method,
         "qweather_api_key_masked": _mask_key(config.qweather_api_key),
         "has_qweather_key": bool(config.qweather_api_key),
-        "qweather_api_host": config.qweather_api_host
+        "qweather_api_host": config.qweather_api_host,
+        "zodiac_sign": config.zodiac_sign
     }
