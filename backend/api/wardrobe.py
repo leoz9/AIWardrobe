@@ -2,12 +2,11 @@
 衣柜 API - 获取和管理衣物
 """
 from fastapi import APIRouter, HTTPException
-from typing import Optional
 
 from domain.clothes import ClothesItem, WardrobeResponse, ClothesCreate
+from domain.clothes import normalize_category_value
 from storage.db import (
     get_all_clothes,
-    get_clothes_by_category,
     get_clothes_by_id,
     delete_clothes,
     update_clothes
@@ -21,18 +20,20 @@ async def get_wardrobe():
     """
     获取整个衣柜
     
-    按 top/bottom/shoes 三类返回所有衣物
+    按 top/bottom/shoes/accessory 四类返回所有衣物
     """
     all_clothes = await get_all_clothes()
     
-    tops = [c for c in all_clothes if c.category == "top"]
-    bottoms = [c for c in all_clothes if c.category == "bottom"]
-    shoes = [c for c in all_clothes if c.category == "shoes"]
+    tops = [c for c in all_clothes if normalize_category_value(c.category) == "top"]
+    bottoms = [c for c in all_clothes if normalize_category_value(c.category) == "bottom"]
+    shoes = [c for c in all_clothes if normalize_category_value(c.category) == "shoes"]
+    accessories = [c for c in all_clothes if normalize_category_value(c.category) == "accessory"]
     
     return WardrobeResponse(
         tops=tops,
         bottoms=bottoms,
-        shoes=shoes
+        shoes=shoes,
+        accessories=accessories
     )
 
 
@@ -42,15 +43,17 @@ async def get_wardrobe_category(category: str):
     按类别获取衣物
     
     Args:
-        category: top, bottom, shoes
+        category: top, bottom, shoes, accessory
     """
-    if category not in ["top", "bottom", "shoes"]:
+    category = normalize_category_value(category)
+    if category not in ["top", "bottom", "shoes", "accessory"]:
         raise HTTPException(
             status_code=400,
-            detail="类别必须是 top, bottom 或 shoes"
+            detail="类别必须是 top, bottom, shoes 或 accessory"
         )
     
-    return await get_clothes_by_category(category)
+    all_clothes = await get_all_clothes()
+    return [item for item in all_clothes if normalize_category_value(item.category) == category]
 
 
 @router.get("/clothes/{clothes_id}", response_model=ClothesItem)

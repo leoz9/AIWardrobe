@@ -5,7 +5,7 @@ import { Settings as SettingsIcon, RefreshCw, Sparkles, CloudSun, Droplets, Wind
 import Settings from '../components/Settings'
 
 const API_BASE = `http://${window.location.hostname}:8000/api`
-const DEFAULT_LOCATION = '101020100'
+const FALLBACK_LOCATION = '上海, 上海市, 中国'
 
 const formatDate = (locale) => {
     const lang = locale?.startsWith('zh')
@@ -25,8 +25,10 @@ export default function Home() {
     const navigate = useNavigate()
 
     const [weather, setWeather] = useState(null)
-    const [wardrobe, setWardrobe] = useState({ tops: [], bottoms: [], shoes: [] })
+    const [wardrobe, setWardrobe] = useState({ tops: [], bottoms: [], shoes: [], accessories: [] })
     const [horoscope, setHoroscope] = useState(null)
+    const [horoscopeInferenceLoading, setHoroscopeInferenceLoading] = useState(false)
+    const [defaultLocation, setDefaultLocation] = useState(FALLBACK_LOCATION)
     const [loading, setLoading] = useState(true)
     const [refreshing, setRefreshing] = useState(false)
     const [showSettings, setShowSettings] = useState(false)
@@ -35,7 +37,8 @@ export default function Home() {
     const carouselItems = useMemo(() => ([
         ...wardrobe.tops.map(item => ({ ...item, category: 'top' })),
         ...wardrobe.bottoms.map(item => ({ ...item, category: 'bottom' })),
-        ...wardrobe.shoes.map(item => ({ ...item, category: 'shoes' }))
+        ...wardrobe.shoes.map(item => ({ ...item, category: 'shoes' })),
+        ...wardrobe.accessories.map(item => ({ ...item, category: 'accessory' }))
     ]), [wardrobe])
 
     useEffect(() => {
@@ -51,7 +54,42 @@ export default function Home() {
         return () => clearInterval(timer)
     }, [carouselItems.length])
 
-    const fetchDashboard = async (withLoading = true) => {
+    const fetchConfiguredLocation = async () => {
+        try {
+            const response = await fetch(`${API_BASE}/config`)
+            if (!response.ok) {
+                return FALLBACK_LOCATION
+            }
+            const data = await response.json()
+            return (data.weather_location || '').trim() || FALLBACK_LOCATION
+        } catch {
+            return FALLBACK_LOCATION
+        }
+    }
+
+    const fetchHoroscope = async (location, includeInference = false) => {
+        const response = await fetch(
+            `${API_BASE}/horoscope/daily?location=${encodeURIComponent(location)}&include_inference=${includeInference}`
+        )
+        if (!response.ok) return null
+        return response.json()
+    }
+
+    const runHoroscopeInference = async (location) => {
+        setHoroscopeInferenceLoading(true)
+        try {
+            const inferred = await fetchHoroscope(location, true)
+            if (inferred) {
+                setHoroscope(inferred)
+            }
+        } catch (error) {
+            console.error('Failed to fetch horoscope inference:', error)
+        } finally {
+            setHoroscopeInferenceLoading(false)
+        }
+    }
+
+    const fetchDashboard = async (withLoading = true, location = defaultLocation) => {
         if (withLoading) {
             setLoading(true)
         } else {
@@ -59,10 +97,10 @@ export default function Home() {
         }
 
         try {
-            const [weatherRes, wardrobeRes, horoscopeRes] = await Promise.all([
-                fetch(`${API_BASE}/weather?location=${DEFAULT_LOCATION}`),
+            const [weatherRes, wardrobeRes, horoscopeData] = await Promise.all([
+                fetch(`${API_BASE}/weather?location=${encodeURIComponent(location)}`),
                 fetch(`${API_BASE}/wardrobe`),
-                fetch(`${API_BASE}/horoscope/daily?location=${DEFAULT_LOCATION}`)
+                fetchHoroscope(location, false)
             ])
 
             if (weatherRes.ok) {
@@ -70,11 +108,23 @@ export default function Home() {
             }
 
             if (wardrobeRes.ok) {
-                setWardrobe(await wardrobeRes.json())
+                const data = await wardrobeRes.json()
+                setWardrobe({
+                    tops: data.tops || [],
+                    bottoms: data.bottoms || [],
+                    shoes: data.shoes || [],
+                    accessories: data.accessories || []
+                })
             }
 
-            if (horoscopeRes.ok) {
-                setHoroscope(await horoscopeRes.json())
+            if (horoscopeData) {
+                setHoroscope(horoscopeData)
+                const shouldInfer = horoscopeData.llm_status === 'pending'
+                if (horoscopeData.is_configured && shouldInfer) {
+                    void runHoroscopeInference(location)
+                } else {
+                    setHoroscopeInferenceLoading(false)
+                }
             }
         } catch (error) {
             console.error('Failed to fetch home dashboard:', error)
@@ -85,24 +135,35 @@ export default function Home() {
     }
 
     useEffect(() => {
-        fetchDashboard(true)
+        const initializeDashboard = async () => {
+            const location = await fetchConfiguredLocation()
+            setDefaultLocation(location)
+            await fetchDashboard(true, location)
+        }
+
+        void initializeDashboard()
     }, [])
+
+    const handleSettingsSaved = async () => {
+        const location = await fetchConfiguredLocation()
+        setDefaultLocation(location)
+        await fetchDashboard(false, location)
+    }
 
     const getCategoryLabel = (category) => {
         if (category === 'top') return t('home.categoryTop')
         if (category === 'bottom') return t('home.categoryBottom')
-        return t('home.categoryShoes')
+        if (category === 'shoes') return t('home.categoryShoes')
+        return t('home.categoryAccessory')
     }
+
+    const sectionTitleClass = 'text-sm font-semibold text-zinc-800 dark:text-zinc-100 flex items-center gap-2'
 
     return (
         <div className="min-h-screen bg-[var(--bg-primary)] pb-28 relative overflow-hidden">
-            <div className="absolute top-[-100px] right-[-80px] w-64 h-64 rounded-full bg-sky-200/50 dark:bg-sky-900/20 blur-3xl pointer-events-none"></div>
-            <div className="absolute bottom-[20%] left-[-100px] w-64 h-64 rounded-full bg-amber-200/40 dark:bg-amber-900/20 blur-3xl pointer-events-none"></div>
-
             <header className="px-4 pt-6 pb-4 flex items-start justify-between relative z-10">
                 <div>
-                    <p className="text-xs uppercase tracking-[0.16em] text-zinc-500">{t('home.today')}</p>
-                    <h1 className="text-3xl font-serif font-bold text-[var(--text-primary)] leading-tight mt-1">{t('home.title')}</h1>
+                    <p className="text-[11px] tracking-[0.08em] text-zinc-500">{t('home.today')}</p>
                     <p className="text-sm text-zinc-500 mt-1">{formatDate(i18n.language)}</p>
                 </div>
 
@@ -133,7 +194,7 @@ export default function Home() {
                 <main className="px-4 space-y-4 relative z-10">
                     <section className="card p-4 sm:p-5">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-base font-semibold text-zinc-800 dark:text-zinc-100 flex items-center gap-2">
+                            <h2 className={sectionTitleClass}>
                                 <CloudSun size={18} className="text-accent" />
                                 {t('home.weatherTitle')}
                             </h2>
@@ -144,7 +205,7 @@ export default function Home() {
 
                         <div className="mt-3 flex items-end justify-between">
                             <div>
-                                <div className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+                                <div className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
                                     {weather ? `${Math.round(weather.temperature)}°` : '--'}
                                 </div>
                                 <div className="text-sm text-zinc-500 mt-1">
@@ -170,7 +231,7 @@ export default function Home() {
 
                     <section className="card p-4 sm:p-5">
                         <div className="flex items-center justify-between mb-3">
-                            <h2 className="text-base font-semibold text-zinc-800 dark:text-zinc-100 flex items-center gap-2">
+                            <h2 className={sectionTitleClass}>
                                 <Shirt size={18} className="text-accent" />
                                 {t('home.carouselTitle')}
                             </h2>
@@ -262,7 +323,7 @@ export default function Home() {
 
                     <section className="card p-4 sm:p-5">
                         <div className="flex items-center justify-between mb-3">
-                            <h2 className="text-base font-semibold text-zinc-800 dark:text-zinc-100 flex items-center gap-2">
+                            <h2 className={sectionTitleClass}>
                                 <Sparkles size={18} className="text-accent" />
                                 {t('home.horoscopeTitle')}
                             </h2>
@@ -292,6 +353,20 @@ export default function Home() {
                             {horoscope?.suggestion || t('home.horoscopeFallback')}
                         </div>
 
+                        <div className="mt-4 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 p-3">
+                            <div className="text-[10px] uppercase tracking-wide text-zinc-500">{t('home.llmReasoningTitle')}</div>
+                            {horoscopeInferenceLoading ? (
+                                <div className="mt-2 flex items-center gap-2 text-xs text-zinc-500">
+                                    <div className="w-4 h-4 border-2 border-zinc-300 dark:border-zinc-700 border-t-accent rounded-full animate-spin"></div>
+                                    {t('home.llmReasoningLoading')}
+                                </div>
+                            ) : (
+                                <p className="mt-2 text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                                    {horoscope?.llm_reasoning || t('home.llmReasoningFallback')}
+                                </p>
+                            )}
+                        </div>
+
                         {horoscope && !horoscope.is_configured && (
                             <button
                                 className="mt-4 w-full py-2.5 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-sm font-medium hover:opacity-90 cursor-pointer transition-opacity"
@@ -307,7 +382,7 @@ export default function Home() {
             <Settings
                 isOpen={showSettings}
                 onClose={() => setShowSettings(false)}
-                onSave={() => fetchDashboard(false)}
+                onSave={handleSettingsSaved}
             />
         </div>
     )

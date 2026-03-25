@@ -13,7 +13,7 @@ CLOTHES_SEMANTIC_PROMPT = """
 
 JSON Schema：
 {
-  "category": "top | bottom | shoes",
+  "category": "top | bottom | shoes | accessory",
   "item": "具体衣物名称，如 T恤、牛仔裤、运动鞋",
   "style_semantics": ["风格标签，如 休闲、正式、运动"],
   "season_semantics": ["春", "夏", "秋", "冬"],
@@ -21,6 +21,8 @@ JSON Schema：
   "color_semantics": "颜色语义，如 深色系 / 浅色系 / 中性色",
   "description": "一句话语义总结"
 }
+
+当图片主体是首饰/配件（如项链、手链、帽子、围巾、手表、眼镜、腰带）时，category 必须是 accessory。
 
 如果无法判断，请填 "unknown"。
 """

@@ -21,6 +21,7 @@
     "categoryTop": "上装 (Top)",
     "categoryBottom": "下装 (Bottom)",
     "categoryShoes": "鞋履 (Shoes)",
+    "categoryAccessory": "饰品 (Accessory)",
     "color": "颜色",
     "colorPlaceholder": "主要颜色",
     "style": "风格",
@@ -48,6 +49,7 @@
     "tops": "上装",
     "bottoms": "下装",
     "shoes": "鞋履",
+    "accessories": "饰品",
     "loading": "加载中...",
     "noMatch": "暂无匹配衣物",
     "deleteConfirm": "确定要删除这件衣物吗？",
@@ -77,6 +79,7 @@
     "top": "上衣",
     "bottom": "下装",
     "shoes": "鞋履",
+    "accessory": "饰品",
     "noItems": "暂无{{label}}"
   },
   "recommendation": {
@@ -87,7 +90,7 @@
     "currentLocation": "当前位置",
     "searchCity": "输入城市、区县或省份",
     "searchAction": "查询天气并生成推荐",
-    "searchHint": "支持城市名、区县名、省市组合、拼音或和风天气 LocationID。",
+    "searchHint": "支持城市名、区县名、省市组合、拼音，或经纬度坐标（如 31.23,121.47）。",
     "searching": "正在搜索地区...",
     "noCity": "未找到匹配的城市",
     "enterCity": "请输入地区名称进行搜索",
@@ -129,6 +132,7 @@
     "categoryTop": "上装",
     "categoryBottom": "下装",
     "categoryShoes": "鞋履",
+    "categoryAccessory": "饰品",
     "viewAll": "查看全部",
     "emptyWardrobe": "你的衣柜还是空的，先录入几件单品吧。",
     "goEntry": "去录入",
@@ -144,7 +148,10 @@
     "unknownWeather": "未知天气",
     "unknownLocation": "未知位置",
     "unknownZodiac": "未设置星座",
-    "horoscopeFallback": "暂时无法获取运势，稍后再试。"
+    "horoscopeFallback": "暂时无法获取运势，稍后再试。",
+    "llmReasoningTitle": "LLM 推理",
+    "llmReasoningLoading": "正在推理中...",
+    "llmReasoningFallback": "暂时没有推理结果。"
   },
   "settings": {
     "title": "API 设置",
@@ -181,6 +188,9 @@
     "appSection": "应用设置",
     "zodiac": "星座",
     "zodiacPlaceholder": "请选择你的星座",
+    "defaultCity": "默认城市",
+    "defaultCityPlaceholder": "例如：南京, 江苏, 中国",
+    "defaultCityFormatError": "地点格式不完整，请使用“城市, 省/州, 国家”，例如：南京, 江苏, 中国",
     "zodiacOptions": {
       "aries": "白羊座",
       "taurus": "金牛座",

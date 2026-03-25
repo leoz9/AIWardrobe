@@ -5,16 +5,11 @@ AI穿搭推荐服务
 import httpx
 from typing import Any
 
+from domain.clothes import normalize_category_value
 from services.horoscope import get_daily_horoscope
 from services.weather import WeatherInfo
 from storage.config_store import load_config
 from storage.db import get_all_clothes
-
-CATEGORY_ALIASES = {
-    "top": {"top", "tops", "上衣", "上装", "外套"},
-    "bottom": {"bottom", "bottoms", "裤子", "下装", "裙子"},
-    "shoes": {"shoes", "shoe", "鞋", "鞋子", "鞋履"},
-}
 
 SEASON_ALIASES = {
     "春": {"春", "春季", "spring"},
@@ -44,14 +39,6 @@ ACCESSORY_KEYWORDS = (
     "necklace", "earring", "bracelet", "ring", "watch", "sunglasses",
     "tie", "belt"
 )
-
-
-def normalize_category(category: str) -> str:
-    value = (category or "").strip().lower()
-    for canonical, aliases in CATEGORY_ALIASES.items():
-        if value in aliases:
-            return canonical
-    return value
 
 
 def normalize_seasons(raw_values: list[str]) -> set[str]:
@@ -239,6 +226,9 @@ def build_purchase_suggestion(
 def extract_wardrobe_accessories(all_clothes: list[dict]) -> list[dict]:
     accessories = []
     for item in all_clothes:
+        if normalize_category_value(str(item.get("category", ""))) == "accessory":
+            accessories.append(item)
+            continue
         text = f"{item.get('item', '')} {item.get('description', '')}".lower()
         if any(keyword in text for keyword in ACCESSORY_KEYWORDS):
             accessories.append(item)
@@ -300,12 +290,16 @@ async def get_ai_recommendation(weather: WeatherInfo, zodiac_sign: str | None = 
         for item in all_clothes_items
     ]
 
-    horoscope = await get_daily_horoscope(weather=weather, zodiac_sign=zodiac_sign)
+    horoscope = await get_daily_horoscope(
+        weather=weather,
+        zodiac_sign=zodiac_sign,
+        include_inference=True,
+    )
     temperature_profile = build_temperature_profile(weather)
 
     by_category: dict[str, list[dict]] = {"top": [], "bottom": [], "shoes": []}
     for item in all_clothes:
-        category = normalize_category(str(item.get("category", "")))
+        category = normalize_category_value(str(item.get("category", "")))
         if category not in by_category:
             continue
         if is_temperature_compatible(item, temperature_profile["allowed_seasons"]):

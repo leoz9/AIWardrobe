@@ -1,5 +1,5 @@
 """
-测试和风天气 API 集成
+测试 Open-Meteo 天气 API 集成
 """
 import asyncio
 from services.weather import (
@@ -13,7 +13,7 @@ from services.weather import (
 async def test_weather():
     """测试天气服务"""
     print("=" * 50)
-    print("🌤️  测试和风天气 API 集成")
+    print("🌤️  测试 Open-Meteo 天气 API 集成")
     print("=" * 50)
     
     # 测试不同城市
@@ -52,7 +52,7 @@ async def test_weather():
             print(f"❌ 获取 {city_name} 天气信息失败")
     
     print("\n" + "=" * 50)
-    print("🔍 测试和风天气原始数据")
+    print("🔍 测试天气原始数据（兼容结构）")
     print("=" * 50)
     
     # 测试原始数据

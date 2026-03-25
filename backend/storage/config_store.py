@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from typing import Optional
 from domain.config import LLMConfig
+from services.weather import validate_location_input, DEFAULT_LOCATION_QUERY
 
 CONFIG_FILE = Path(__file__).parent / "llm_config.json"
 
@@ -33,8 +34,7 @@ def update_config(
     model: Optional[str] = None,
     removebg_api_key: Optional[str] = None,
     bg_removal_method: Optional[str] = None,
-    qweather_api_key: Optional[str] = None,
-    qweather_api_host: Optional[str] = None,
+    weather_location: Optional[str] = None,
     zodiac_sign: Optional[str] = None
 ) -> LLMConfig:
     """更新配置"""
@@ -50,10 +50,12 @@ def update_config(
         config.removebg_api_key = removebg_api_key.strip()
     if bg_removal_method is not None:
         config.bg_removal_method = bg_removal_method
-    if qweather_api_key is not None:
-        config.qweather_api_key = qweather_api_key.strip()
-    if qweather_api_host is not None:
-        config.qweather_api_host = qweather_api_host.strip()
+    if weather_location is not None:
+        normalized_location = weather_location.strip() or DEFAULT_LOCATION_QUERY
+        validation_error = validate_location_input(normalized_location)
+        if validation_error:
+            raise ValueError(validation_error)
+        config.weather_location = normalized_location
     if zodiac_sign is not None:
         config.zodiac_sign = zodiac_sign.strip().lower()
     
@@ -73,6 +75,9 @@ def _mask_key(key: str) -> str:
 def get_masked_config() -> dict:
     """获取脱敏后的配置（隐藏 API Key）"""
     config = load_config()
+    weather_location = (config.weather_location or "").strip() or DEFAULT_LOCATION_QUERY
+    if validate_location_input(weather_location):
+        weather_location = DEFAULT_LOCATION_QUERY
     
     return {
         "api_base": config.api_base,
@@ -82,8 +87,6 @@ def get_masked_config() -> dict:
         "removebg_api_key_masked": _mask_key(config.removebg_api_key),
         "has_removebg_key": bool(config.removebg_api_key),
         "bg_removal_method": config.bg_removal_method,
-        "qweather_api_key_masked": _mask_key(config.qweather_api_key),
-        "has_qweather_key": bool(config.qweather_api_key),
-        "qweather_api_host": config.qweather_api_host,
+        "weather_location": weather_location,
         "zodiac_sign": config.zodiac_sign
     }

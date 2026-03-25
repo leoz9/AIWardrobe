@@ -9,7 +9,7 @@ from services.segment import remove_background
 from services.removebg import remove_background_api
 from services.openai_compatible import analyze_clothes_openai
 from storage.config_store import load_config
-from domain.clothes import ClothesSemantics, ClothesCreate, ClothesItem
+from domain.clothes import ClothesSemantics, ClothesCreate, ClothesItem, normalize_category_value
 from storage.db import add_clothes, get_clothes_by_id
 
 router = APIRouter()
@@ -17,6 +17,8 @@ router = APIRouter()
 # 上传目录
 UPLOAD_DIR = Path(__file__).parent.parent / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
+
+ALLOWED_CATEGORIES = {"top", "bottom", "shoes", "accessory"}
 
 
 @router.post("/upload", response_model=ClothesItem)
@@ -68,9 +70,13 @@ async def upload_image(file: UploadFile = File(...)):
         with open(filepath, "wb") as f:
             f.write(processed_bytes)
         
+        normalized_category = normalize_category_value(semantics.category)
+        if normalized_category not in ALLOWED_CATEGORIES:
+            normalized_category = "accessory"
+
         # 保存到数据库
         clothes_data = ClothesCreate(
-            category=semantics.category,
+            category=normalized_category,
             item=semantics.item,
             style_semantics=semantics.style_semantics,
             season_semantics=semantics.season_semantics,

@@ -7,7 +7,7 @@ const API_BASE = `http://${window.location.hostname}:8000/api`
 
 export default function Wardrobe() {
     const { t } = useTranslation()
-    const [wardrobe, setWardrobe] = useState({ tops: [], bottoms: [], shoes: [] })
+    const [wardrobe, setWardrobe] = useState({ tops: [], bottoms: [], shoes: [], accessories: [] })
     const [loading, setLoading] = useState(true)
     const [filters, setFilters] = useState({
         search: '',
@@ -24,7 +24,12 @@ export default function Wardrobe() {
             const response = await fetch(`${API_BASE}/wardrobe`)
             if (response.ok) {
                 const data = await response.json()
-                setWardrobe(data)
+                setWardrobe({
+                    tops: data.tops || [],
+                    bottoms: data.bottoms || [],
+                    shoes: data.shoes || [],
+                    accessories: data.accessories || []
+                })
             }
         } catch (error) {
             console.error('Failed to fetch wardrobe:', error)
@@ -75,7 +80,8 @@ export default function Wardrobe() {
     const sections = [
         { title: t('wardrobe.tops'), items: filterItems(wardrobe.tops) },
         { title: t('wardrobe.bottoms'), items: filterItems(wardrobe.bottoms) },
-        { title: t('wardrobe.shoes'), items: filterItems(wardrobe.shoes) }
+        { title: t('wardrobe.shoes'), items: filterItems(wardrobe.shoes) },
+        { title: t('wardrobe.accessories'), items: filterItems(wardrobe.accessories) }
     ]
 
     if (loading) return (

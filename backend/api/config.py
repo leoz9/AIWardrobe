@@ -25,8 +25,7 @@ async def set_config(config_update: LLMConfigUpdate):
             model=config_update.model,
             removebg_api_key=config_update.removebg_api_key,
             bg_removal_method=config_update.bg_removal_method,
-            qweather_api_key=config_update.qweather_api_key,
-            qweather_api_host=config_update.qweather_api_host,
+            weather_location=config_update.weather_location,
             zodiac_sign=config_update.zodiac_sign
         )
         return {
@@ -34,6 +33,8 @@ async def set_config(config_update: LLMConfigUpdate):
             "message": "配置已更新",
             "config": get_masked_config()
         }
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -23,8 +23,8 @@ export default function Recommendation() {
     const [cityQuery, setCityQuery] = useState('')
     const [searchResults, setSearchResults] = useState([])
     const [selectedCity, setSelectedCity] = useState({
-        name: '上海',
-        id: '101020100'
+        name: '上海, 上海市, 中国',
+        id: '上海, 上海市, 中国'
     })
     const [showCityPicker, setShowCityPicker] = useState(false)
     const [searchingCities, setSearchingCities] = useState(false)
@@ -32,6 +32,32 @@ export default function Recommendation() {
     const cityInputRef = useRef(null)
 
     const [displayedRecommendation, setDisplayedRecommendation] = useState('')
+
+    useEffect(() => {
+        const fetchDefaultCity = async () => {
+            try {
+                const response = await fetch(`${API_BASE}/config`)
+                if (!response.ok) {
+                    return
+                }
+
+                const data = await response.json()
+                const location = (data.weather_location || '').trim()
+                if (!location) {
+                    return
+                }
+
+                setSelectedCity({
+                    name: location,
+                    id: location
+                })
+            } catch (error) {
+                console.error('Failed to fetch default city config:', error)
+            }
+        }
+
+        void fetchDefaultCity()
+    }, [])
 
     useEffect(() => {
         if (!recommendation) {

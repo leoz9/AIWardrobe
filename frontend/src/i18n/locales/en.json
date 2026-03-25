@@ -21,6 +21,7 @@
     "categoryTop": "Top",
     "categoryBottom": "Bottom",
     "categoryShoes": "Shoes",
+    "categoryAccessory": "Accessory",
     "color": "Color",
     "colorPlaceholder": "Main color",
     "style": "Style",
@@ -48,6 +49,7 @@
     "tops": "Tops",
     "bottoms": "Bottoms",
     "shoes": "Shoes",
+    "accessories": "Accessories",
     "loading": "Loading...",
     "noMatch": "No matching items",
     "deleteConfirm": "Are you sure you want to delete this item?",
@@ -77,6 +79,7 @@
     "top": "Top",
     "bottom": "Bottom",
     "shoes": "Shoes",
+    "accessory": "Accessory",
     "noItems": "No {{label}}"
   },
   "recommendation": {
@@ -87,7 +90,7 @@
     "currentLocation": "Current Location",
     "searchCity": "Enter city, district, or province",
     "searchAction": "Check Weather",
-    "searchHint": "Supports city names, districts, province-city combinations, pinyin, or QWeather LocationID.",
+    "searchHint": "Supports city names, districts, province-city combinations, pinyin, or coordinates (e.g. 31.23,121.47).",
     "searching": "Searching locations...",
     "noCity": "No matching city found",
     "enterCity": "Enter a location to search",
@@ -129,6 +132,7 @@
     "categoryTop": "Top",
     "categoryBottom": "Bottom",
     "categoryShoes": "Shoes",
+    "categoryAccessory": "Accessory",
     "viewAll": "View all",
     "emptyWardrobe": "Your wardrobe is empty. Add a few pieces first.",
     "goEntry": "Add Clothes",
@@ -144,7 +148,10 @@
     "unknownWeather": "Unknown",
     "unknownLocation": "Unknown location",
     "unknownZodiac": "No zodiac",
-    "horoscopeFallback": "Horoscope is temporarily unavailable. Please try again later."
+    "horoscopeFallback": "Horoscope is temporarily unavailable. Please try again later.",
+    "llmReasoningTitle": "LLM Reasoning",
+    "llmReasoningLoading": "Reasoning in progress...",
+    "llmReasoningFallback": "No reasoning result yet."
   },
   "settings": {
     "title": "API Settings",
@@ -181,6 +188,9 @@
     "appSection": "App Settings",
     "zodiac": "Zodiac Sign",
     "zodiacPlaceholder": "Select your zodiac sign",
+    "defaultCity": "Default City",
+    "defaultCityPlaceholder": "e.g. Nanjing, Jiangsu, China",
+    "defaultCityFormatError": "Location is incomplete. Use \"City, State/Province, Country\", e.g. Nanjing, Jiangsu, China.",
     "zodiacOptions": {
       "aries": "Aries",
       "taurus": "Taurus",

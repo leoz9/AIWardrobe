@@ -10,6 +10,8 @@ from services.weather import (
     get_season_from_weather,
     get_clothing_suggestion,
     search_city,
+    normalize_location_request,
+    DEFAULT_LOCATION_QUERY,
     WeatherInfo,
     WeatherResponse,
     CityInfo
@@ -21,30 +23,36 @@ router = APIRouter()
 @router.get("/weather", response_model=WeatherInfo)
 async def get_current_weather(
     location: str = Query(
-        default="101020100",
-        description="LocationID 或 经纬度坐标(如 '116.41,39.92')"
-    )
+        default=DEFAULT_LOCATION_QUERY,
+        description="城市名 或 经纬度坐标(如 '31.23,121.47' 或 '121.47,31.23')"
+    ),
+    city: Optional[str] = Query(default=None, description="城市（结构化查询参数）"),
+    state: Optional[str] = Query(default=None, description="省/州（结构化查询参数）"),
+    country: Optional[str] = Query(default=None, description="国家（结构化查询参数）"),
 ):
     """
     获取当前天气信息
     
     参数:
-        location: LocationID（如 101010100=北京）或 经纬度坐标（如 116.41,39.92）
+        location: 城市名（如 上海、Tokyo）或 经纬度坐标（如 31.23,121.47）
         
     返回:
         简化的天气信息
         
-    常用城市 LocationID:
-        - 101010100: 北京
-        - 101020100: 上海
-        - 101280101: 广州
-        - 101280601: 深圳
-        - 101210101: 杭州
-        
-    更多城市 ID 可通过和风天气 GeoAPI 查询:
-    https://dev.qweather.com/docs/api/geoapi/
+    说明:
+        - 天气数据使用 Open-Meteo 免费全球接口
+        - 无需配置天气 API Key
     """
-    weather = await get_weather(location)
+    normalized_location, validation_error = normalize_location_request(
+        location=location,
+        city=city,
+        state=state,
+        country=country,
+    )
+    if validation_error:
+        raise HTTPException(status_code=422, detail=validation_error)
+
+    weather = await get_weather(normalized_location)
     
     if not weather:
         raise HTTPException(status_code=500, detail="获取天气信息失败")
@@ -55,20 +63,32 @@ async def get_current_weather(
 @router.get("/weather/raw", response_model=WeatherResponse)
 async def get_raw_weather(
     location: str = Query(
-        default="101020100",
-        description="LocationID 或 经纬度坐标"
-    )
+        default=DEFAULT_LOCATION_QUERY,
+        description="城市名 或 经纬度坐标"
+    ),
+    city: Optional[str] = Query(default=None, description="城市（结构化查询参数）"),
+    state: Optional[str] = Query(default=None, description="省/州（结构化查询参数）"),
+    country: Optional[str] = Query(default=None, description="国家（结构化查询参数）"),
 ):
     """
-    获取和风天气原始数据
+    获取天气原始数据（兼容旧响应结构）
     
     参数:
-        location: LocationID 或 经纬度坐标
+        location: 城市名 或 经纬度坐标
         
     返回:
-        完整的和风天气 API 响应数据
+        兼容 WeatherResponse 的原始数据
     """
-    weather = await get_qweather_now(location)
+    normalized_location, validation_error = normalize_location_request(
+        location=location,
+        city=city,
+        state=state,
+        country=country,
+    )
+    if validation_error:
+        raise HTTPException(status_code=422, detail=validation_error)
+
+    weather = await get_qweather_now(normalized_location)
     
     if not weather:
         raise HTTPException(status_code=500, detail="获取天气信息失败")
@@ -79,20 +99,32 @@ async def get_raw_weather(
 @router.get("/weather/suggestion")
 async def get_weather_suggestion(
     location: str = Query(
-        default="101020100",
-        description="LocationID 或 经纬度坐标"
-    )
+        default=DEFAULT_LOCATION_QUERY,
+        description="城市名 或 经纬度坐标"
+    ),
+    city: Optional[str] = Query(default=None, description="城市（结构化查询参数）"),
+    state: Optional[str] = Query(default=None, description="省/州（结构化查询参数）"),
+    country: Optional[str] = Query(default=None, description="国家（结构化查询参数）"),
 ):
     """
     获取基于天气的穿搭建议
     
     参数:
-        location: LocationID 或 经纬度坐标
+        location: 城市名 或 经纬度坐标
         
     返回:
         天气信息 + 穿搭建议 + 适合季节
     """
-    weather = await get_weather(location)
+    normalized_location, validation_error = normalize_location_request(
+        location=location,
+        city=city,
+        state=state,
+        country=country,
+    )
+    if validation_error:
+        raise HTTPException(status_code=422, detail=validation_error)
+
+    weather = await get_weather(normalized_location)
     
     if not weather:
         raise HTTPException(status_code=500, detail="获取天气信息失败")
@@ -131,7 +163,7 @@ async def search_cities(
         limit: 返回结果数量（默认10，最多20）
         
     返回:
-        城市信息列表，包含城市名称、LocationID等
+        城市信息列表，包含城市名称和坐标 ID（经度,纬度）
         
     示例:
         - /api/cities?query=北京

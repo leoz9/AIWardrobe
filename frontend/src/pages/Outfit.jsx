@@ -67,14 +67,15 @@ const OutfitPart = ({ items, label, proportion, currentIndex, onPrev, onNext, em
 
 export default function Outfit() {
     const { t } = useTranslation()
-    const [wardrobe, setWardrobe] = useState({ tops: [], bottoms: [], shoes: [] })
+    const [wardrobe, setWardrobe] = useState({ tops: [], bottoms: [], shoes: [], accessories: [] })
     const [loading, setLoading] = useState(true)
     const [filterSeason, setFilterSeason] = useState('all')
 
     const [currentIndices, setCurrentIndices] = useState({
         tops: 0,
         bottoms: 0,
-        shoes: 0
+        shoes: 0,
+        accessories: 0
     })
 
     useEffect(() => {
@@ -85,7 +86,13 @@ export default function Outfit() {
         try {
             const response = await fetch(`${API_BASE}/wardrobe`)
             if (response.ok) {
-                setWardrobe(await response.json())
+                const data = await response.json()
+                setWardrobe({
+                    tops: data.tops || [],
+                    bottoms: data.bottoms || [],
+                    shoes: data.shoes || [],
+                    accessories: data.accessories || []
+                })
             }
         } catch (error) {
             console.error(error)
@@ -102,10 +109,17 @@ export default function Outfit() {
     const tops = filter(wardrobe.tops)
     const bottoms = filter(wardrobe.bottoms)
     const shoes = filter(wardrobe.shoes)
+    const accessories = filter(wardrobe.accessories)
 
     const handlePrev = (category) => {
         setCurrentIndices(prev => {
-            const items = category === 'tops' ? tops : category === 'bottoms' ? bottoms : shoes
+            const items = category === 'tops'
+                ? tops
+                : category === 'bottoms'
+                    ? bottoms
+                    : category === 'shoes'
+                        ? shoes
+                        : accessories
             const newIndex = prev[category] > 0 ? prev[category] - 1 : items.length - 1
             return { ...prev, [category]: newIndex }
         })
@@ -113,7 +127,13 @@ export default function Outfit() {
 
     const handleNext = (category) => {
         setCurrentIndices(prev => {
-            const items = category === 'tops' ? tops : category === 'bottoms' ? bottoms : shoes
+            const items = category === 'tops'
+                ? tops
+                : category === 'bottoms'
+                    ? bottoms
+                    : category === 'shoes'
+                        ? shoes
+                        : accessories
             const newIndex = prev[category] < items.length - 1 ? prev[category] + 1 : 0
             return { ...prev, [category]: newIndex }
         })
@@ -123,7 +143,8 @@ export default function Outfit() {
         setCurrentIndices({
             tops: tops.length > 0 ? Math.floor(Math.random() * tops.length) : 0,
             bottoms: bottoms.length > 0 ? Math.floor(Math.random() * bottoms.length) : 0,
-            shoes: shoes.length > 0 ? Math.floor(Math.random() * shoes.length) : 0
+            shoes: shoes.length > 0 ? Math.floor(Math.random() * shoes.length) : 0,
+            accessories: accessories.length > 0 ? Math.floor(Math.random() * accessories.length) : 0
         })
     }
 
@@ -199,6 +220,15 @@ export default function Outfit() {
                     onPrev={() => handlePrev('shoes')}
                     onNext={() => handleNext('shoes')}
                     emptyText={t('outfit.noItems', { label: t('outfit.shoes') })}
+                />
+                <OutfitPart
+                    items={accessories}
+                    label={t('outfit.accessory')}
+                    proportion={1}
+                    currentIndex={currentIndices.accessories}
+                    onPrev={() => handlePrev('accessories')}
+                    onNext={() => handleNext('accessories')}
+                    emptyText={t('outfit.noItems', { label: t('outfit.accessory') })}
                 />
             </div>
         </div>

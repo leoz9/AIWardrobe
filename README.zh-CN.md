@@ -27,7 +27,7 @@
 | 特性 | 描述 |
 | :--- | :--- |
 | **智能上传** | 上传衣服照片后，使用 `rembg` 自动去背景，并通过视觉模型识别类别、颜色和风格 |
-| **天气穿搭** | 集成和风天气 API，根据实时天气生成更合适的穿搭建议 |
+| **天气穿搭** | 集成 Open-Meteo 免费全球天气接口，根据实时天气生成更合适的穿搭建议 |
 | **虚拟衣柜** | 以结构化方式浏览、搜索和管理所有衣物 |
 | **AI 推荐** | 支持 Gemini 和 OpenAI 风格接口，用于生成个性化穿搭方案 |
 | **响应式界面** | 基于 Tailwind CSS，适配桌面、平板和手机 |
@@ -60,7 +60,6 @@
 
 - **Node.js** `v20+` &nbsp;|&nbsp; **Python** `v3.10+`
 - [Google Gemini API Key](https://aistudio.google.com/app/apikey) 或 OpenAI 兼容接口 Key
-- [和风天气 API Key](https://console.qweather.com)
 
 ### 1. 克隆与配置
 

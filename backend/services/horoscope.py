@@ -1,15 +1,23 @@
 """
 星座运势服务
-根据日期、天气和用户星座生成今日运势
+1) 先拉取并存储 aztro 原始数据
+2) 再按需执行 LLM 推理
 """
+import os
 from datetime import datetime
 from typing import Optional
 
 import httpx
 
 from storage.config_store import load_config
-from services.openai_compatible import extract_json_from_response
+from storage.db import (
+    get_horoscope_record,
+    upsert_horoscope_source,
+    update_horoscope_inference,
+)
 from services.weather import WeatherInfo
+
+AZTRO_API_URL = os.getenv("AZTRO_API_URL", "https://aztro.sameerkumar.website").rstrip("/")
 
 ZODIAC_NAMES = {
     "aries": "白羊座",
@@ -127,80 +135,121 @@ def build_weather_tip(weather: WeatherInfo) -> str:
     return "整体体感平稳，穿搭上可兼顾舒适与层次感。"
 
 
-def fallback_horoscope(sign_key: str, weather: WeatherInfo) -> dict:
-    """在未配置 LLM 或调用失败时提供基础运势。"""
-    today = datetime.now().strftime("%Y-%m-%d")
+def _to_lucky_number(raw_value: object, default: int = 7) -> int:
+    try:
+        lucky_number = int(raw_value)
+    except Exception:
+        lucky_number = default
+    return min(max(lucky_number, 1), 99)
+
+
+def fallback_horoscope_source(sign_key: str, weather: WeatherInfo, today: str) -> dict:
+    """aztro 不可用时的兜底源数据。"""
     day_seed = datetime.now().toordinal()
     sign_index = list(ZODIAC_NAMES.keys()).index(sign_key)
-
     lucky_number = ((day_seed + sign_index * 7) % 89) + 11
     trait = ZODIAC_TRAITS.get(sign_key, "节奏感")
-    weather_tip = build_weather_tip(weather)
 
     return {
-        "date": today,
-        "summary": f"今天你的关键词是{trait}，把精力集中在一件最重要的事上，会有更稳定的收获。",
+        "current_date": today,
+        "date_range": "",
+        "description": f"今天你的关键词是{trait}，把精力集中在一件最重要的事上，会有更稳定的收获。",
         "mood": "稳中有进",
-        "lucky_color": DEFAULT_COLORS.get(sign_key, "浅蓝色"),
+        "color": DEFAULT_COLORS.get(sign_key, "浅蓝色"),
         "lucky_number": lucky_number,
-        "suggestion": weather_tip
+        "lucky_time": "",
+        "compatibility": "",
+        "weather_tip": build_weather_tip(weather),
     }
 
 
-def sanitize_horoscope_payload(payload: dict, weather_tip: str) -> dict:
-    """清洗 LLM 输出，保证字段完整可用。"""
-    summary = str(payload.get("summary", "")).strip() or "今天整体节奏平稳，适合把注意力放在核心目标。"
+def sanitize_aztro_payload(payload: dict, sign_key: str, today: str, weather: WeatherInfo) -> dict:
+    """清洗 aztro 输出，保证字段完整可用。"""
+    description = str(payload.get("description", "")).strip() or "今天整体节奏平稳，适合把注意力放在核心目标。"
     mood = str(payload.get("mood", "")).strip() or "平稳"
-    lucky_color = str(payload.get("lucky_color", "")).strip() or "浅蓝色"
-    suggestion = str(payload.get("suggestion", "")).strip() or weather_tip
-
-    raw_number = payload.get("lucky_number", 7)
-    try:
-        lucky_number = int(raw_number)
-    except Exception:
-        lucky_number = 7
-    lucky_number = min(max(lucky_number, 1), 99)
+    color = str(payload.get("color", "")).strip() or DEFAULT_COLORS.get(sign_key, "浅蓝色")
+    lucky_time = str(payload.get("lucky_time", "")).strip()
+    compatibility = str(payload.get("compatibility", "")).strip()
+    date_range = str(payload.get("date_range", "")).strip()
+    current_date = str(payload.get("current_date", "")).strip() or today
 
     return {
-        "summary": summary,
+        "current_date": current_date,
+        "date_range": date_range,
+        "description": description,
         "mood": mood,
-        "lucky_color": lucky_color,
-        "lucky_number": lucky_number,
-        "suggestion": suggestion
+        "color": color,
+        "lucky_number": _to_lucky_number(payload.get("lucky_number", 7)),
+        "lucky_time": lucky_time,
+        "compatibility": compatibility,
+        "weather_tip": build_weather_tip(weather),
     }
 
 
-async def generate_llm_horoscope(sign_key: str, weather: WeatherInfo) -> Optional[dict]:
-    """调用 OpenAI 兼容接口生成运势文本。"""
+async def fetch_aztro_horoscope(sign_key: str, today: str, weather: WeatherInfo) -> Optional[dict]:
+    """获取 aztro 今日运势。"""
+    url = f"{AZTRO_API_URL}/?sign={sign_key}&day=today"
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(url, headers={"Accept": "application/json"})
+            if response.status_code in (404, 405):
+                response = await client.get(url, headers={"Accept": "application/json"})
+
+        if response.status_code != 200:
+            print(f"aztro 请求失败: {response.status_code} {response.text[:200]}")
+            return None
+
+        data = response.json()
+        if not isinstance(data, dict):
+            print("aztro 返回格式异常")
+            return None
+
+        return sanitize_aztro_payload(data, sign_key=sign_key, today=today, weather=weather)
+    except Exception as exc:
+        print(f"aztro 调用异常: {exc}")
+        return None
+
+
+async def generate_llm_reasoning(
+    sign_key: str,
+    zodiac_name: str,
+    weather: WeatherInfo,
+    source_payload: dict,
+) -> tuple[Optional[str], str, str]:
+    """
+    基于已存储的原始运势数据做 LLM 推理。
+    Returns:
+        (推理文本, 状态, 错误信息)
+    """
     config = load_config()
     if not config.api_key:
-        return None
+        return None, "skipped", "未配置 LLM API Key"
 
     api_base = config.api_base.rstrip("/")
     if not api_base.endswith("/v1"):
         api_base = f"{api_base}/v1"
 
-    today = datetime.now().strftime("%Y-%m-%d")
-    zodiac_name = ZODIAC_NAMES.get(sign_key, sign_key)
-    weather_tip = build_weather_tip(weather)
-
     prompt = f"""
-你是一个风格克制、实用导向的星座顾问。请为用户生成今日运势。
+你是一名理性、可执行导向的运势分析助手。请基于以下星座原始数据给出穿搭场景推理。
 
-日期：{today}
-星座：{zodiac_name}
-天气：{weather.condition}，气温 {weather.temperature}°C，体感 {weather.feelsLike}°C，湿度 {weather.humidity}%
+星座：{zodiac_name}（{sign_key}）
+aztro 原始数据：
+- 日期：{source_payload.get('current_date', '')}
+- 描述：{source_payload.get('description', '')}
+- 心情：{source_payload.get('mood', '')}
+- 幸运色：{source_payload.get('color', '')}
+- 幸运数字：{source_payload.get('lucky_number', '')}
+- 幸运时段：{source_payload.get('lucky_time', '')}
+- 契合星座：{source_payload.get('compatibility', '')}
 
-请输出 JSON，字段必须完整：
-{{
-  "summary": "40-80字，描述今日整体运势，避免绝对化和恐吓表述",
-  "mood": "2-6字情绪关键词",
-  "lucky_color": "1个颜色词",
-  "lucky_number": 1-99 的整数,
-  "suggestion": "结合天气和运势给出 1 条可执行建议（20-50字）"
-}}
+天气：
+- {weather.condition}，温度 {weather.temperature}°C，体感 {weather.feelsLike}°C，湿度 {weather.humidity}%
 
-只返回 JSON，不要代码块，不要额外说明。
+输出要求：
+1. 输出 2-3 句中文
+2. 给出可执行的穿搭/配色建议
+3. 不要绝对化、不要神秘化
+4. 不要代码块，不要 JSON
 """
 
     payload = {
@@ -208,46 +257,99 @@ async def generate_llm_horoscope(sign_key: str, weather: WeatherInfo) -> Optiona
         "messages": [
             {
                 "role": "system",
-                "content": "你输出结构化 JSON，内容友好、理性、可执行。"
+                "content": "你做简洁、务实的推理，避免夸张表达。"
             },
             {
                 "role": "user",
                 "content": prompt
             }
         ],
-        "temperature": 0.7
+        "temperature": 0.6
     }
 
     try:
-        async with httpx.AsyncClient(timeout=12.0) as client:
+        async with httpx.AsyncClient(timeout=15.0) as client:
             response = await client.post(
                 f"{api_base}/chat/completions",
                 headers={
                     "Authorization": f"Bearer {config.api_key}",
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
                 },
-                json=payload
+                json=payload,
             )
 
         if response.status_code != 200:
-            print(f"LLM 星座运势请求失败: {response.status_code} {response.text[:200]}")
-            return None
+            err = f"LLM 星座推理请求失败: {response.status_code}"
+            print(err)
+            return None, "failed", err
 
-        content = response.json()["choices"][0]["message"]["content"]
-        parsed = extract_json_from_response(content)
-        return sanitize_horoscope_payload(parsed, weather_tip)
+        content = (
+            response.json()
+            .get("choices", [{}])[0]
+            .get("message", {})
+            .get("content", "")
+            .strip()
+        )
+        if not content:
+            return None, "failed", "LLM 返回空内容"
+
+        return content, "done", ""
     except Exception as exc:
-        print(f"LLM 星座运势调用异常: {exc}")
-        return None
+        err = f"LLM 星座推理异常: {exc}"
+        print(err)
+        return None, "failed", err
 
 
-async def get_daily_horoscope(weather: WeatherInfo, zodiac_sign: Optional[str] = None) -> dict:
-    """获取今日星座运势。"""
+def build_suggestion(weather: WeatherInfo, source_payload: dict) -> str:
+    weather_tip = str(source_payload.get("weather_tip", "")).strip() or build_weather_tip(weather)
+    lucky_time = str(source_payload.get("lucky_time", "")).strip()
+    if lucky_time:
+        return f"幸运时段：{lucky_time}。{weather_tip}"
+    return weather_tip
+
+
+def build_horoscope_response(
+    *,
+    today: str,
+    sign_key: str,
+    source_provider: str,
+    source_payload: dict,
+    weather: WeatherInfo,
+    llm_status: str,
+    llm_reasoning: str,
+) -> dict:
+    zodiac_name = ZODIAC_NAMES.get(sign_key, sign_key)
+    summary = str(source_payload.get("description", "")).strip() or "今天整体节奏平稳，建议聚焦最重要的一件事。"
+    mood = str(source_payload.get("mood", "")).strip() or "平稳"
+    lucky_color = str(source_payload.get("color", "")).strip() or DEFAULT_COLORS.get(sign_key, "浅蓝色")
+    lucky_number = _to_lucky_number(source_payload.get("lucky_number", 7))
+
+    return {
+        "date": today,
+        "zodiac_sign": sign_key,
+        "zodiac_name": zodiac_name,
+        "is_configured": True,
+        "summary": summary,
+        "mood": mood,
+        "lucky_color": lucky_color,
+        "lucky_number": lucky_number,
+        "suggestion": build_suggestion(weather, source_payload),
+        "source_provider": source_provider,
+        "llm_status": llm_status,
+        "llm_reasoning": llm_reasoning or "",
+    }
+
+
+async def get_daily_horoscope(
+    weather: WeatherInfo,
+    zodiac_sign: Optional[str] = None,
+    include_inference: bool = True,
+) -> dict:
+    """获取今日星座运势（先源数据，后可选推理）。"""
     today = datetime.now().strftime("%Y-%m-%d")
     config = load_config()
 
     sign_key = normalize_zodiac_sign(zodiac_sign) or normalize_zodiac_sign(config.zodiac_sign)
-
     if not sign_key:
         return {
             "date": today,
@@ -258,21 +360,63 @@ async def get_daily_horoscope(weather: WeatherInfo, zodiac_sign: Optional[str] =
             "mood": "待设置",
             "lucky_color": "云白色",
             "lucky_number": 6,
-            "suggestion": build_weather_tip(weather)
+            "suggestion": build_weather_tip(weather),
+            "source_provider": "none",
+            "llm_status": "skipped",
+            "llm_reasoning": "",
         }
 
-    llm_result = await generate_llm_horoscope(sign_key, weather)
-    if not llm_result:
-        llm_result = fallback_horoscope(sign_key, weather)
+    zodiac_name = ZODIAC_NAMES.get(sign_key, sign_key)
 
-    return {
-        "date": today,
-        "zodiac_sign": sign_key,
-        "zodiac_name": ZODIAC_NAMES.get(sign_key, sign_key),
-        "is_configured": True,
-        "summary": llm_result["summary"],
-        "mood": llm_result["mood"],
-        "lucky_color": llm_result["lucky_color"],
-        "lucky_number": llm_result["lucky_number"],
-        "suggestion": llm_result["suggestion"]
-    }
+    cached = await get_horoscope_record(record_date=today, zodiac_sign=sign_key)
+    if cached:
+        source_payload = cached.get("source_payload") or {}
+        source_provider = cached.get("source_provider", "cached")
+        llm_status = cached.get("llm_status", "pending")
+        llm_reasoning = cached.get("llm_reasoning", "")
+        record_id = int(cached["id"])
+    else:
+        source_payload = await fetch_aztro_horoscope(sign_key=sign_key, today=today, weather=weather)
+        source_provider = "aztro"
+        if not source_payload:
+            source_payload = fallback_horoscope_source(sign_key=sign_key, weather=weather, today=today)
+            source_provider = "fallback"
+
+        record_id = await upsert_horoscope_source(
+            record_date=today,
+            zodiac_sign=sign_key,
+            zodiac_name=zodiac_name,
+            source_provider=source_provider,
+            source_payload=source_payload,
+        )
+        llm_status = "pending"
+        llm_reasoning = ""
+
+    # 每天只推理一次：只有当天首次记录的 pending 状态才执行推理
+    if include_inference and llm_status == "pending":
+        reasoning, status, err = await generate_llm_reasoning(
+            sign_key=sign_key,
+            zodiac_name=zodiac_name,
+            weather=weather,
+            source_payload=source_payload,
+        )
+        if reasoning:
+            llm_reasoning = reasoning
+        llm_status = status
+
+        await update_horoscope_inference(
+            record_id=record_id,
+            llm_status=llm_status,
+            llm_reasoning=llm_reasoning,
+            llm_error=err,
+        )
+
+    return build_horoscope_response(
+        today=today,
+        sign_key=sign_key,
+        source_provider=source_provider,
+        source_payload=source_payload,
+        weather=weather,
+        llm_status=llm_status,
+        llm_reasoning=llm_reasoning,
+    )

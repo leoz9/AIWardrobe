@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '../contexts/ThemeContext'
-import { Sun, Moon, Globe, Sparkles } from 'lucide-react'
+import { Sun, Moon, Globe, Sparkles, MapPin } from 'lucide-react'
 
 const LANGUAGES = [
     { code: 'zh', label: '中文' },
@@ -24,6 +24,24 @@ const ZODIAC_SIGNS = [
     'pisces'
 ]
 
+const DEFAULT_LOCATION = '上海, 上海市, 中国'
+const LOCATION_ID_REGEX = /^\d{9}$/
+const COORDINATE_LOCATION_REGEX = /^\s*-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?\s*$/
+const LOCATION_PART_SEPARATOR_REGEX = /[，,]+/
+
+const isCompleteLocationInput = (location) => {
+    const raw = (location || '').trim()
+    if (!raw) return false
+    if (LOCATION_ID_REGEX.test(raw) || COORDINATE_LOCATION_REGEX.test(raw)) return true
+
+    const parts = raw
+        .split(LOCATION_PART_SEPARATOR_REGEX)
+        .map(part => part.trim())
+        .filter(Boolean)
+
+    return parts.length >= 3
+}
+
 const Settings = ({ isOpen, onClose, onSave }) => {
     const { t, i18n } = useTranslation()
     const { theme, toggleTheme } = useTheme()
@@ -33,8 +51,7 @@ const Settings = ({ isOpen, onClose, onSave }) => {
         model: 'gpt-4o',
         removebg_api_key: '',
         bg_removal_method: 'local',
-        qweather_api_key: '',
-        qweather_api_host: 'devapi.qweather.com',
+        weather_location: DEFAULT_LOCATION,
         zodiac_sign: ''
     })
     const [models, setModels] = useState([])
@@ -43,7 +60,6 @@ const Settings = ({ isOpen, onClose, onSave }) => {
     const [testResult, setTestResult] = useState(null)
     const [hasExistingKey, setHasExistingKey] = useState(false)
     const [hasRemoveBgKey, setHasRemoveBgKey] = useState(false)
-    const [hasQweatherKey, setHasQweatherKey] = useState(false)
     const [showModelSelect, setShowModelSelect] = useState(false)
 
     const API_BASE = `http://${window.location.hostname}:8000/api`
@@ -70,12 +86,11 @@ const Settings = ({ isOpen, onClose, onSave }) => {
                     api_base: data.api_base || 'https://api.openai.com/v1',
                     model: data.model || 'gpt-4o',
                     bg_removal_method: data.bg_removal_method || 'local',
-                    qweather_api_host: data.qweather_api_host || 'devapi.qweather.com',
+                    weather_location: data.weather_location || DEFAULT_LOCATION,
                     zodiac_sign: data.zodiac_sign || ''
                 }))
                 setHasExistingKey(data.has_api_key)
                 setHasRemoveBgKey(data.has_removebg_key)
-                setHasQweatherKey(data.has_qweather_key)
             }
         } catch (error) {
             console.error('Failed to fetch config:', error)
@@ -104,7 +119,11 @@ const Settings = ({ isOpen, onClose, onSave }) => {
         setTesting(true)
         setTestResult(null)
 
-        await handleSave(false)
+        const saveSuccess = await handleSave(false)
+        if (!saveSuccess) {
+            setTesting(false)
+            return
+        }
 
         try {
             const response = await fetch(`${API_BASE}/test-connection`, {
@@ -128,11 +147,20 @@ const Settings = ({ isOpen, onClose, onSave }) => {
 
     const handleSave = async (closeAfter = true) => {
         try {
+            const normalizedLocation = (config.weather_location || '').trim() || DEFAULT_LOCATION
+            if (!isCompleteLocationInput(normalizedLocation)) {
+                setTestResult({
+                    success: false,
+                    message: t('settings.defaultCityFormatError')
+                })
+                return false
+            }
+
             const payload = {
                 api_base: config.api_base,
                 model: config.model,
                 bg_removal_method: config.bg_removal_method,
-                qweather_api_host: config.qweather_api_host,
+                weather_location: normalizedLocation,
                 zodiac_sign: config.zodiac_sign
             }
 
@@ -141,9 +169,6 @@ const Settings = ({ isOpen, onClose, onSave }) => {
             }
             if (config.removebg_api_key) {
                 payload.removebg_api_key = config.removebg_api_key
-            }
-            if (config.qweather_api_key) {
-                payload.qweather_api_key = config.qweather_api_key
             }
 
             const response = await fetch(`${API_BASE}/config`, {
@@ -159,9 +184,17 @@ const Settings = ({ isOpen, onClose, onSave }) => {
                     onSave && onSave()
                     onClose()
                 }
+                return true
             }
+            const errorPayload = await response.json().catch(() => ({}))
+            setTestResult({
+                success: false,
+                message: errorPayload.detail || t('settings.defaultCityFormatError')
+            })
+            return false
         } catch (error) {
             console.error('Failed to save config:', error)
+            return false
         }
     }
 
@@ -261,6 +294,25 @@ const Settings = ({ isOpen, onClose, onSave }) => {
                                     </option>
                                 ))}
                             </select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                                <MapPin size={16} className="text-accent" />
+                                {t('settings.defaultCity')}
+                            </label>
+                            <input
+                                type="text"
+                                className="input-field"
+                                value={config.weather_location}
+                                onChange={e => {
+                                    setConfig(prev => ({ ...prev, weather_location: e.target.value }))
+                                    if (testResult?.success === false) {
+                                        setTestResult(null)
+                                    }
+                                }}
+                                placeholder={t('settings.defaultCityPlaceholder')}
+                            />
                         </div>
                     </div>
 
@@ -456,46 +508,7 @@ const Settings = ({ isOpen, onClose, onSave }) => {
                         )}
                     </div>
 
-                    <div className="h-px bg-zinc-200/60 dark:bg-zinc-700/60 w-full" />
-
-                    {/* Weather API Section */}
-                    <div className="space-y-4 pb-4">
-                        <div className="text-xs font-bold tracking-widest text-zinc-400 uppercase">{t('settings.weatherSection')}</div>
-
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex justify-between">
-                                {t('settings.qweatherKey')}
-                                {hasQweatherKey && !config.qweather_api_key && (
-                                    <span className="text-green-500 font-normal text-xs bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded">{t('settings.configured')}</span>
-                                )}
-                            </label>
-                            <input
-                                type="password"
-                                className="input-field font-mono"
-                                value={config.qweather_api_key}
-                                onChange={e => setConfig(prev => ({ ...prev, qweather_api_key: e.target.value }))}
-                                placeholder={hasQweatherKey ? `••••••••（${t('settings.keepEmpty')}）` : t('settings.removebgKeyPlaceholder')}
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300 flex justify-between">
-                                API Host
-                            </label>
-                            <input
-                                type="text"
-                                className="input-field font-mono text-sm"
-                                value={config.qweather_api_host}
-                                onChange={e => setConfig(prev => ({ ...prev, qweather_api_host: e.target.value }))}
-                                placeholder="devapi.qweather.com"
-                            />
-                            <div className="text-xs flex justify-end mt-1">
-                                <a href="https://console.qweather.com" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
-                                    {t('settings.qweatherConsole')}
-                                </a>
-                            </div>
-                        </div>
-                    </div>
+                    <div className="pb-4" />
                 </div>
 
                 <div className="p-5 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 sm:rounded-b-2xl flex gap-3 pb-safe">

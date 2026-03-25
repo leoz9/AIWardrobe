@@ -136,6 +136,7 @@ export default function Entry() {
                                     <option value="top">{t('entry.categoryTop')}</option>
                                     <option value="bottom">{t('entry.categoryBottom')}</option>
                                     <option value="shoes">{t('entry.categoryShoes')}</option>
+                                    <option value="accessory">{t('entry.categoryAccessory')}</option>
                                 </select>
                             </div>
                         </section>

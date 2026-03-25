@@ -27,7 +27,7 @@ Upload clothing photos, remove backgrounds automatically, classify garments with
 | Feature | Description |
 | :--- | :--- |
 | **Smart Upload** | Upload clothing photos, auto-remove backgrounds with `rembg`, analyze category, color, and style via AI vision models |
-| **Weather-Based Styling** | Integrates QWeather API to generate outfit suggestions based on real-time conditions |
+| **Weather-Based Styling** | Integrates free global weather data (Open-Meteo) to generate outfit suggestions based on real-time conditions |
 | **Digital Wardrobe** | Browse, search, and manage your clothing in a structured wardrobe view |
 | **AI Recommendations** | Supports Gemini and OpenAI-compatible providers for personalized outfit generation |
 | **Responsive UI** | Optimized for desktop, tablet, and mobile with a modern Tailwind CSS interface |
@@ -60,7 +60,6 @@ Upload clothing photos, remove backgrounds automatically, classify garments with
 
 - **Node.js** `v20+` &nbsp;|&nbsp; **Python** `v3.10+`
 - [Google Gemini API Key](https://aistudio.google.com/app/apikey) or an OpenAI-compatible API key
-- [QWeather API Key](https://console.qweather.com)
 
 ### 1. Clone & Configure
 
