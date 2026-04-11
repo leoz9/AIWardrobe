@@ -3,10 +3,13 @@
 文档: https://open-meteo.com/
 """
 import re
+from datetime import datetime
 from typing import Optional, List
 
 import httpx
 from pydantic import BaseModel
+
+from storage.db import get_weather_cache, upsert_weather_cache, cleanup_weather_cache
 
 
 class CityInfo(BaseModel):
@@ -91,6 +94,15 @@ TRADITIONAL_TO_SIMPLIFIED_MAP = str.maketrans({
 })
 NOMINATIM_USER_AGENT = "AIWardrobe/1.0 (city-search)"
 DEFAULT_LOCATION_QUERY = "上海, 上海市, 中国"
+
+
+def build_weather_cache_bucket(now: Optional[datetime] = None) -> str:
+    ts = now or datetime.now()
+    return ts.strftime("%Y-%m-%dT%H")
+
+
+def build_weather_cache_key(resolved_location: str) -> str:
+    return (resolved_location or "").strip().lower()
 
 
 def normalize_location_query(query: str) -> str:
@@ -759,6 +771,18 @@ async def get_weather(location: str = DEFAULT_LOCATION_QUERY) -> Optional[Weathe
         WeatherInfo 或 None
     """
     resolved_location, display_location = await resolve_location(location)
+    cache_key = build_weather_cache_key(resolved_location)
+    bucket_start = build_weather_cache_bucket()
+
+    cached = await get_weather_cache(cache_key, bucket_start)
+    if cached:
+        payload = cached.get("payload") or {}
+        if payload:
+            try:
+                return WeatherInfo(**payload)
+            except Exception:
+                pass
+
     weather_response = await get_qweather_now(resolved_location)
 
     if not weather_response:
@@ -776,7 +800,7 @@ async def get_weather(location: str = DEFAULT_LOCATION_QUERY) -> Optional[Weathe
         )
 
     now = weather_response.now
-    return WeatherInfo(
+    weather_info = WeatherInfo(
         temperature=float(now.temp),
         feelsLike=float(now.feelsLike),
         condition=now.text,
@@ -787,6 +811,11 @@ async def get_weather(location: str = DEFAULT_LOCATION_QUERY) -> Optional[Weathe
         location=display_location,
         obsTime=now.obsTime,
     )
+
+    await upsert_weather_cache(cache_key, bucket_start, weather_info.model_dump())
+    await cleanup_weather_cache(max_rows=1200)
+
+    return weather_info
 
 
 def get_season_from_weather(weather: WeatherInfo) -> list[str]:

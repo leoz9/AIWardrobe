@@ -1,3 +1,4 @@
+import asyncio
 from types import SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock, patch
@@ -5,7 +6,10 @@ from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 
 import main
+import storage.db as db_store
+import services.weather as weather_service
 from domain.clothes import resolve_category_value
+from services.weather import build_weather_cache_bucket, build_weather_cache_key
 
 
 def _mock_weather(location: str):
@@ -119,6 +123,37 @@ class RecommendationApiTests(unittest.TestCase):
             config_store.CONFIG_FILE = backup_file
             config_store._CONFIG_CACHE = backup_cache
             config_store._CONFIG_MTIME = backup_mtime
+
+    def test_get_weather_uses_db_cache_before_provider(self):
+        async def run_case():
+            cache_key = build_weather_cache_key("121.4737,31.2304")
+            bucket = build_weather_cache_bucket()
+
+            await db_store.upsert_weather_cache(
+                cache_key,
+                bucket,
+                {
+                    "temperature": 18.5,
+                    "feelsLike": 19.0,
+                    "condition": "多云",
+                    "icon": "102",
+                    "humidity": 63.0,
+                    "windDir": "东北风",
+                    "windScale": "2",
+                    "location": "上海, 上海市, 中国",
+                    "obsTime": "2026-04-11T10:00:00+08:00",
+                },
+            )
+
+            with patch("services.weather.resolve_location", new=AsyncMock(return_value=("121.4737,31.2304", "上海, 上海市, 中国"))):
+                with patch("services.weather.get_qweather_now", new=AsyncMock(side_effect=AssertionError("provider should not be called"))):
+                    weather = await weather_service.get_weather("上海, 上海市, 中国")
+
+            self.assertIsNotNone(weather)
+            self.assertEqual(weather.condition, "多云")
+            self.assertEqual(weather.temperature, 18.5)
+
+        asyncio.run(run_case())
 
 
 if __name__ == "__main__":

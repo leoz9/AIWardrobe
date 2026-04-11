@@ -43,5 +43,27 @@ CREATE TABLE IF NOT EXISTS horoscope_records (
 """
 
 HOROSCOPE_RECORDS_INDEX_SQL = """
-CREATE INDEX IF NOT EXISTS idx_horoscope_date_sign ON horoscope_records(record_date, zodiac_sign);
+CREATE INDEX IF NOT EXISTS idx_horoscope_records_date_sign
+ON horoscope_records(record_date, zodiac_sign);
+"""
+
+# 天气缓存表（按地点+时间桶）
+WEATHER_CACHE_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS weather_cache (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    location_key TEXT NOT NULL,
+    bucket_start TEXT NOT NULL,  -- YYYY-MM-DDTHH
+    payload TEXT NOT NULL,  -- JSON WeatherInfo
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(location_key, bucket_start)
+);
+"""
+
+WEATHER_CACHE_INDEX_SQL = """
+CREATE INDEX IF NOT EXISTS idx_weather_cache_key_bucket ON weather_cache(location_key, bucket_start);
+"""
+
+WEATHER_CACHE_UPDATED_AT_INDEX_SQL = """
+CREATE INDEX IF NOT EXISTS idx_weather_cache_updated_at ON weather_cache(updated_at);
 """

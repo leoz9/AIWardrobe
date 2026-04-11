@@ -12,6 +12,9 @@ from storage.models import (
     CLOTHES_INDEX_SQL,
     HOROSCOPE_RECORDS_TABLE_SQL,
     HOROSCOPE_RECORDS_INDEX_SQL,
+    WEATHER_CACHE_TABLE_SQL,
+    WEATHER_CACHE_INDEX_SQL,
+    WEATHER_CACHE_UPDATED_AT_INDEX_SQL,
 )
 
 # 数据库文件路径
@@ -32,6 +35,9 @@ async def init_db():
         await db.execute(CLOTHES_INDEX_SQL)
         await db.execute(HOROSCOPE_RECORDS_TABLE_SQL)
         await db.execute(HOROSCOPE_RECORDS_INDEX_SQL)
+        await db.execute(WEATHER_CACHE_TABLE_SQL)
+        await db.execute(WEATHER_CACHE_INDEX_SQL)
+        await db.execute(WEATHER_CACHE_UPDATED_AT_INDEX_SQL)
         await db.commit()
 
 
@@ -234,6 +240,85 @@ async def update_horoscope_inference(
         await db.commit()
 
 
+async def get_weather_cache(location_key: str, bucket_start: str) -> Optional[dict[str, Any]]:
+    """按地点+时间桶获取天气缓存。"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            """
+            SELECT * FROM weather_cache
+            WHERE location_key = ? AND bucket_start = ?
+            LIMIT 1
+            """,
+            (location_key, bucket_start),
+        )
+        row = await cursor.fetchone()
+        if not row:
+            return None
+        return _row_to_weather_cache(row)
+
+
+async def upsert_weather_cache(
+    location_key: str,
+    bucket_start: str,
+    payload: dict[str, Any],
+) -> int:
+    """写入或更新天气缓存。"""
+    payload_json = json.dumps(payload, ensure_ascii=False)
+
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            """
+            SELECT id FROM weather_cache
+            WHERE location_key = ? AND bucket_start = ?
+            LIMIT 1
+            """,
+            (location_key, bucket_start),
+        )
+        existing = await cursor.fetchone()
+
+        if existing:
+            await db.execute(
+                """
+                UPDATE weather_cache
+                SET payload = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (payload_json, existing["id"]),
+            )
+            await db.commit()
+            return int(existing["id"])
+
+        cursor = await db.execute(
+            """
+            INSERT INTO weather_cache (location_key, bucket_start, payload)
+            VALUES (?, ?, ?)
+            """,
+            (location_key, bucket_start, payload_json),
+        )
+        await db.commit()
+        return int(cursor.lastrowid)
+
+
+async def cleanup_weather_cache(max_rows: int = 1000) -> None:
+    """限制天气缓存表大小，保留最新记录。"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            """
+            DELETE FROM weather_cache
+            WHERE id NOT IN (
+                SELECT id FROM weather_cache
+                ORDER BY updated_at DESC, id DESC
+                LIMIT ?
+            )
+            """,
+            (max_rows,),
+        )
+        await db.commit()
+
+
 def _row_to_clothes_item(row: aiosqlite.Row) -> ClothesItem:
     """将数据库行转换为 ClothesItem"""
     return ClothesItem(
@@ -262,6 +347,18 @@ def _row_to_horoscope_record(row: aiosqlite.Row) -> dict[str, Any]:
         "llm_status": row["llm_status"] or "pending",
         "llm_reasoning": row["llm_reasoning"] or "",
         "llm_error": row["llm_error"] or "",
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+    }
+
+
+def _row_to_weather_cache(row: aiosqlite.Row) -> dict[str, Any]:
+    """将数据库行转换为天气缓存字典。"""
+    return {
+        "id": int(row["id"]),
+        "location_key": row["location_key"],
+        "bucket_start": row["bucket_start"],
+        "payload": json.loads(row["payload"] or "{}"),
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
     }

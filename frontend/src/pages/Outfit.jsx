@@ -1,21 +1,22 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, Shuffle } from 'lucide-react'
 
 import { API_BASE, toImageUrl } from '../utils/api'
 
-const CATEGORY_META = {
-    tops: { key: 'tops', labelKey: 'outfit.top' },
-    bottoms: { key: 'bottoms', labelKey: 'outfit.bottom' },
-    shoes: { key: 'shoes', labelKey: 'outfit.shoes' }
-}
+const CATEGORIES = [
+    { key: 'tops', labelKey: 'outfit.top' },
+    { key: 'bottoms', labelKey: 'outfit.bottom' },
+    { key: 'shoes', labelKey: 'outfit.shoes' }
+]
 
 export default function Outfit() {
+    const navigate = useNavigate()
     const { t } = useTranslation()
     const [wardrobe, setWardrobe] = useState({ tops: [], bottoms: [], shoes: [], accessories: [] })
     const [loading, setLoading] = useState(true)
     const [filterSeason, setFilterSeason] = useState('all')
-    const [activeCategory, setActiveCategory] = useState('tops')
 
     const [currentIndices, setCurrentIndices] = useState({
         tops: 0,
@@ -134,14 +135,15 @@ export default function Outfit() {
         { key: '冬', label: t('filter.winter') }
     ]
 
-    const activeItems = getItemsByCategory(activeCategory)
-    const activeIndex = currentIndices[activeCategory] || 0
-
     if (loading) return (
         <div className="flex flex-col items-center justify-center min-h-[60vh]">
             <div className="w-10 h-10 border-4 border-zinc-200 dark:border-zinc-700 border-t-accent rounded-full animate-spin"></div>
         </div>
     )
+
+    const topItem = getCurrentItem('tops')
+    const bottomItem = getCurrentItem('bottoms')
+    const shoesItem = getCurrentItem('shoes')
 
     return (
         <div className="bg-[var(--bg-primary)] px-3 sm:px-4 lg:px-0 pt-3 pb-2 flex flex-col max-w-6xl mx-auto w-full">
@@ -175,88 +177,74 @@ export default function Outfit() {
             </header>
 
             <div className="grid gap-3 lg:grid-cols-12">
-                <section className="card lg:col-span-8 overflow-hidden">
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/60">
-                        <div>
-                            <div className="text-xs text-zinc-500 uppercase tracking-wide">Look Preview</div>
-                            <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{t(`outfit.${activeCategory === 'tops' ? 'top' : activeCategory === 'bottoms' ? 'bottom' : 'shoes'}`)}</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <button
-                                className="btn-icon border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 disabled:opacity-40"
-                                onClick={() => shiftCategory(activeCategory, 'prev')}
-                                disabled={activeItems.length <= 1}
-                            >
-                                <ChevronLeft size={16} />
-                            </button>
-                            <span className="text-xs text-zinc-500 min-w-[3.5rem] text-center">
-                                {activeItems.length ? `${activeIndex + 1} / ${activeItems.length}` : '--'}
-                            </span>
-                            <button
-                                className="btn-icon border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 disabled:opacity-40"
-                                onClick={() => shiftCategory(activeCategory, 'next')}
-                                disabled={activeItems.length <= 1}
-                            >
-                                <ChevronRight size={16} />
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="p-3 sm:p-4 grid gap-2 bg-zinc-50/40 dark:bg-zinc-900/30">
-                        {['tops', 'bottoms', 'shoes'].map((category) => {
-                            const item = getCurrentItem(category)
-                            const isActive = activeCategory === category
-                            return (
-                                <button
-                                    key={category}
-                                    className={`w-full border rounded-xl transition-colors text-left ${isActive
-                                        ? 'border-accent bg-blue-50 dark:bg-blue-900/20'
-                                        : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900'
-                                        }`}
-                                    onClick={() => setActiveCategory(category)}
-                                    type="button"
-                                >
-                                    {!item ? (
-                                        <div className="h-24 flex items-center justify-center text-xs text-zinc-400">
-                                            {t('outfit.noItems', { label: t(CATEGORY_META[category].labelKey) })}
-                                        </div>
+                <section className="card lg:col-span-7 overflow-hidden">
+                    <div className="p-3 sm:p-4 bg-zinc-50/40 dark:bg-zinc-900/30">
+                        <div className="rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 overflow-hidden p-2 sm:p-3">
+                            <div className="h-[44vh] min-h-[340px] max-h-[560px] grid grid-rows-[44%_34%_22%] gap-2">
+                                <div className="rounded-xl bg-zinc-100 dark:bg-zinc-800 p-2 flex items-center justify-center">
+                                    {topItem ? (
+                                        <img src={toImageUrl(topItem.image_url)} alt={topItem.item} className="w-full h-full object-contain" />
                                     ) : (
-                                        <div className="grid grid-cols-[72px_1fr] gap-3 p-2.5 items-center">
-                                            <div className="h-[72px] rounded-lg bg-zinc-100 dark:bg-zinc-800 p-1.5 flex items-center justify-center">
-                                                <img
-                                                    src={toImageUrl(item.image_url)}
-                                                    alt={item.item}
-                                                    className="w-full h-full object-contain"
-                                                />
-                                            </div>
-                                            <div className="min-w-0">
-                                                <div className="text-[11px] text-zinc-500 uppercase tracking-wide">{t(CATEGORY_META[category].labelKey)}</div>
-                                                <div className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate">{item.item}</div>
-                                                {item.description && (
-                                                    <div className="text-xs text-zinc-500 mt-0.5 line-clamp-1">{item.description}</div>
-                                                )}
-                                            </div>
-                                        </div>
+                                        <span className="text-xs text-zinc-400">{t('outfit.noItems', { label: t('outfit.top') })}</span>
                                     )}
-                                </button>
-                            )
-                        })}
+                                </div>
+                                <div className="rounded-xl bg-zinc-100 dark:bg-zinc-800 p-2 flex items-center justify-center">
+                                    {bottomItem ? (
+                                        <img src={toImageUrl(bottomItem.image_url)} alt={bottomItem.item} className="w-full h-full object-contain" />
+                                    ) : (
+                                        <span className="text-xs text-zinc-400">{t('outfit.noItems', { label: t('outfit.bottom') })}</span>
+                                    )}
+                                </div>
+                                <div className="rounded-xl bg-zinc-100 dark:bg-zinc-800 p-2 flex items-center justify-center">
+                                    {shoesItem ? (
+                                        <img src={toImageUrl(shoesItem.image_url)} alt={shoesItem.item} className="w-full h-full object-contain" />
+                                    ) : (
+                                        <span className="text-xs text-zinc-400">{t('outfit.noItems', { label: t('outfit.shoes') })}</span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
-                <aside className="lg:col-span-4 grid grid-cols-3 lg:grid-cols-1 gap-2">
-                    {['tops', 'bottoms', 'shoes'].map((category) => {
-                        const item = getCurrentItem(category)
-                        const isActive = activeCategory === category
+                <aside className="lg:col-span-5 grid grid-cols-1 gap-3">
+                    {CATEGORIES.map((category) => {
+                        const items = getItemsByCategory(category.key)
+                        const item = getCurrentItem(category.key)
+                        const currentIndex = currentIndices[category.key] || 0
                         return (
-                            <button
-                                key={category}
-                                className={`card p-2.5 text-left transition-all ${isActive ? 'ring-2 ring-accent border-accent' : ''}`}
-                                onClick={() => setActiveCategory(category)}
-                                type="button"
-                            >
-                                <div className="text-[11px] text-zinc-500 mb-2 uppercase tracking-wide truncate">{t(CATEGORY_META[category].labelKey)}</div>
-                                <div className="rounded-lg bg-zinc-100 dark:bg-zinc-800 h-24 lg:h-28 p-2 flex items-center justify-center">
+                            <article key={category.key} className="card p-3">
+                                <div className="flex items-center justify-between gap-2 mb-2">
+                                    <div className="text-xs text-zinc-500 uppercase tracking-wide">{t(category.labelKey)}</div>
+                                    <div className="flex items-center gap-1.5">
+                                        <button
+                                            className="btn-icon border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 disabled:opacity-40"
+                                            onClick={() => shiftCategory(category.key, 'prev')}
+                                            disabled={items.length <= 1}
+                                            type="button"
+                                        >
+                                            <ChevronLeft size={15} />
+                                        </button>
+                                        <span className="text-xs text-zinc-500 min-w-[3rem] text-center">
+                                            {items.length ? `${currentIndex + 1}/${items.length}` : '--'}
+                                        </span>
+                                        <button
+                                            className="btn-icon border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 disabled:opacity-40"
+                                            onClick={() => shiftCategory(category.key, 'next')}
+                                            disabled={items.length <= 1}
+                                            type="button"
+                                        >
+                                            <ChevronRight size={15} />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <button
+                                    className="w-full rounded-xl bg-zinc-100 dark:bg-zinc-800 h-40 lg:h-44 p-2.5 flex items-center justify-center hover:opacity-90 transition-opacity"
+                                    onClick={() => item && navigate(`/clothes/${item.id}`)}
+                                    type="button"
+                                    disabled={!item}
+                                >
                                     {item ? (
                                         <img
                                             src={toImageUrl(item.image_url)}
@@ -264,11 +252,10 @@ export default function Outfit() {
                                             className="w-full h-full object-contain"
                                         />
                                     ) : (
-                                        <span className="text-xs text-zinc-400 text-center">{t('outfit.noItems', { label: t(CATEGORY_META[category].labelKey) })}</span>
+                                        <span className="text-xs text-zinc-400 text-center">{t('outfit.noItems', { label: t(category.labelKey) })}</span>
                                     )}
-                                </div>
-                                {item && <div className="text-xs text-zinc-600 dark:text-zinc-300 mt-2 truncate">{item.item}</div>}
-                            </button>
+                                </button>
+                            </article>
                         )
                     })}
                 </aside>
