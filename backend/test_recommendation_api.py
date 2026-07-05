@@ -1,4 +1,6 @@
 import asyncio
+from pathlib import Path
+import tempfile
 from types import SimpleNamespace
 import unittest
 from unittest.mock import AsyncMock, patch
@@ -24,6 +26,21 @@ def _mock_weather(location: str):
         location="上海, 上海市, 中国",
         obsTime="2026-04-10T10:00:00+08:00",
     )
+
+
+def _run_with_initialized_temp_db(async_case):
+    backup_db_path = db_store.DB_PATH
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        db_store.DB_PATH = Path(temp_dir) / "wardrobe.db"
+        try:
+            async def wrapped_case():
+                await db_store.init_db()
+                await async_case()
+
+            asyncio.run(wrapped_case())
+        finally:
+            db_store.DB_PATH = backup_db_path
 
 
 class RecommendationApiTests(unittest.TestCase):
@@ -153,7 +170,8 @@ class RecommendationApiTests(unittest.TestCase):
             self.assertEqual(weather.condition, "多云")
             self.assertEqual(weather.temperature, 18.5)
 
-        asyncio.run(run_case())
+        _run_with_initialized_temp_db(run_case)
+
     def test_get_weather_falls_back_to_latest_cached_when_provider_fails(self):
         async def run_case():
             cache_key = build_weather_cache_key("121.9999,31.9999")
@@ -182,7 +200,7 @@ class RecommendationApiTests(unittest.TestCase):
             self.assertEqual(weather.condition, "阴")
             self.assertEqual(weather.temperature, 16.0)
 
-        asyncio.run(run_case())
+        _run_with_initialized_temp_db(run_case)
 
 
 if __name__ == "__main__":
